@@ -361,6 +361,25 @@ function Step3Placeholder() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [scoringResult, setScoringResult] = useState<any>(null);
   const [outline, setOutline] = useState<any[]>([]);
+
+  // dnd-kit 拖拽排序
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = outline.findIndex((c: any) => c.id === active.id);
+    const newIndex = outline.findIndex((c: any) => c.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const newOutline = [...outline];
+    const [removed] = newOutline.splice(oldIndex, 1);
+    newOutline.splice(newIndex, 0, removed);
+    setOutline(newOutline);
+    // 同步到 Zustand store
+    store.setOutline(newOutline.map((s: any, i: number) => ({
+      id: s.id || `sec-${i}`,
+      title: s.title || '',
+      type: s.type || 'overview',
+    })));
+  };
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
 
   // 从 Zustand store 获取项目背景
@@ -464,15 +483,53 @@ function Step3Placeholder() {
               <FolderTree className="w-4 h-4 text-[var(--primary)]" />
               智能目录大纲
             </h3>
-            <div className="space-y-2">
-              {outline.map((chapter: any) => (
-                <div key={chapter.id}>
-                  <div className="flex items-center justify-between py-1.5">
-                    <span className="text-sm font-medium">{chapter.title}</span>
+            <div className="space-y-1">
+              {outline.map((chapter: any, idx: number) => (
+                <div key={chapter.id} className="group">
+                  <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-[var(--bg-surface)] transition-colors">
+                    {/* 拖拽手柄 */}
+                    <button
+                      className="cursor-grab text-[var(--text-tertiary)] hover:text-[var(--primary)] transition-colors"
+                      onMouseDown={(e) => {
+                        // 拖拽开始：上下移动
+                        const startY = e.clientY;
+                        const startIdx = idx;
+                        const handleMove = (me: MouseEvent) => {
+                          const diff = me.clientY - startY;
+                          const itemHeight = 40;
+                          const steps = Math.round(diff / itemHeight);
+                          if (steps !== 0) {
+                            const newIdx = Math.max(0, Math.min(outline.length - 1, startIdx + steps));
+                            if (newIdx !== startIdx) {
+                              const newOutline = [...outline];
+                              const [removed] = newOutline.splice(startIdx, 1);
+                              newOutline.splice(newIdx, 0, removed);
+                              setOutline(newOutline);
+                              store.setOutline(newOutline.map((s: any, i: number) => ({
+                                id: s.id || `sec-${i}`, title: s.title || '', type: s.type || 'overview',
+                              })));
+                            }
+                          }
+                        };
+                        const handleUp = () => {
+                          document.removeEventListener('mousemove', handleMove);
+                          document.removeEventListener('mouseup', handleUp);
+                        };
+                        document.addEventListener('mousemove', handleMove);
+                        document.addEventListener('mouseup', handleUp);
+                      }}
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                        <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                        <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                        <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                      </svg>
+                    </button>
+                    <span className="text-sm font-medium flex-1">{chapter.title}</span>
                     <span className="text-xs text-[var(--text-tertiary)]">~{chapter.suggested_words}字</span>
                   </div>
                   {chapter.children && chapter.children.map((child: any) => (
-                    <div key={child.id} className="flex items-center justify-between py-1 pl-6 text-[var(--text-secondary)]">
+                    <div key={child.id} className="flex items-center justify-between py-1 pl-10 pr-2 text-[var(--text-secondary)]">
                       <span className="text-xs">{child.title}</span>
                       <span className="text-xs text-[var(--text-tertiary)]">~{child.suggested_words}字</span>
                     </div>
@@ -660,6 +717,29 @@ function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: str
       setRagStatus(`❌ ${e.message}`);
     } finally {
       setGeneratingId(null);
+
+      // 生成完成后：同步到 Zustand + 异步保存到后端
+      setGeneratedContent((prev) => {
+        const content = prev[sectionId];
+        if (content) {
+          // 同步到 Zustand store（用于 Step5 读取）
+          store.setGeneratedContent(sectionId, content);
+
+          // 异步保存到后端（如有 projectId）
+          const projectId = window.location.pathname.split('/').pop();
+          if (projectId && projectId !== 'new') {
+            fetch(`${API_BASE}/projects/${projectId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                generated_sections: { ...prev },
+                status: 'generating',
+              }),
+            }).catch(console.error);
+          }
+        }
+        return prev;
+      });
     }
   }, []);
 

@@ -52,6 +52,19 @@ app.include_router(upload_router)
 app.include_router(project_router)
 
 
+# 导入所有 ORM Model（确保 Base.metadata 包含所有表）
+import app.models  # noqa: F401
+
+
+@app.on_event("startup")
+async def startup_event():
+    """开发环境自动建表（正式环境应使用 Alembic 迁移）"""
+    from app.core.database import get_engine, Base
+    engine = get_engine()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+
 @app.get("/api/health")
 async def health_check():
     """健康检查端点"""
