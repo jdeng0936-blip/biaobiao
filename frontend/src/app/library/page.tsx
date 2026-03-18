@@ -129,7 +129,7 @@ function AITrainingCenter() {
   const [searchDone, setSearchDone] = useState(false);
   const [searchFilter, setSearchFilter] = useState<string>(""); // doc_section 过滤
 
-  const API_BASE = "http://localhost:8000";
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
 
   // 拉取知识库统计 + 文件列表
   useEffect(() => {

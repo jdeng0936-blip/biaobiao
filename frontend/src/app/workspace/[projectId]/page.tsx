@@ -181,7 +181,7 @@ function Step2Upload() {
   const [result, setResult] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const API_BASE = "http://localhost:8000";
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -361,7 +361,7 @@ function Step3Placeholder() {
   const [isExtracting, setIsExtracting] = useState(false);
   const [scoringResult, setScoringResult] = useState<any>(null);
   const [outline, setOutline] = useState<any[]>([]);
-  const API_BASE = "http://localhost:8000";
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
 
   // 从 Zustand store 获取项目背景
   const projectContext = store.projectName || "";
@@ -542,7 +542,7 @@ function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: str
   // 选中浮动工具栏相关状态
   const [floatingToolbar, setFloatingToolbar] = useState<{ x: number; y: number; text: string; sectionTitle: string } | null>(null);
 
-  const API_BASE = "http://localhost:8000";
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
 
   const sections = [
     { id: "3-1", title: "3.1 工程概况", type: "overview" },
@@ -852,7 +852,7 @@ function Step5ReviewExport() {
   const [reviewResults, setReviewResults] = useState<any[]>([]);
   const [isReviewing, setIsReviewing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const API_BASE = "http://localhost:8000";
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
 
   // 从 Zustand store 读取已生成内容和项目名（与 Step4/Step1 共享）
   const storeState = useProjectStore();
@@ -1084,7 +1084,7 @@ function AIChatPanel({ onClose, aiContext, onClearContext }: {
   const [isStreaming, setIsStreaming] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const API_BASE = "http://localhost:8000";
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
   // 保存当前模块上下文用于 Chat 请求
   const [chatModuleContent, setChatModuleContent] = useState("");
 

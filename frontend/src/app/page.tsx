@@ -2,6 +2,7 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
+import Link from "next/link";
 import {
   Shield,
   Zap,
@@ -84,12 +85,12 @@ function Navbar() {
 
         {/* CTA */}
         <div className="flex items-center gap-3">
-          <button className="text-sm text-[var(--text-secondary)] hover:text-white transition-colors px-4 py-2">
+          <Link href="/login" className="text-sm text-[var(--text-secondary)] hover:text-white transition-colors px-4 py-2">
             登录
-          </button>
-          <button className="btn-glow !px-5 !py-2 !text-sm !rounded-lg">
+          </Link>
+          <Link href="/workspace/new" className="btn-glow !px-5 !py-2 !text-sm !rounded-lg">
             免费试用
-          </button>
+          </Link>
         </div>
       </div>
     </motion.nav>
@@ -151,15 +152,15 @@ function HeroSection() {
           transition={{ duration: 0.7, delay: 0.5 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-          <button className="btn-glow !px-8 !py-3.5 !text-base flex items-center gap-2 !rounded-xl">
+          <Link href="/workspace/new" className="btn-glow !px-8 !py-3.5 !text-base flex items-center gap-2 !rounded-xl">
             <Sparkles className="w-5 h-5" />
             立即开始制作
             <ArrowRight className="w-4 h-4" />
-          </button>
-          <button className="px-8 py-3.5 rounded-xl border border-[var(--border-default)] text-[var(--text-secondary)] hover:text-white hover:border-[var(--border-strong)] transition-all text-base flex items-center gap-2">
+          </Link>
+          <Link href="#workflow" className="px-8 py-3.5 rounded-xl border border-[var(--border-default)] text-[var(--text-secondary)] hover:text-white hover:border-[var(--border-strong)] transition-all text-base flex items-center gap-2">
             <FileText className="w-5 h-5" />
             查看演示
-          </button>
+          </Link>
         </motion.div>
 
         {/* 信任指标 */}
@@ -536,11 +537,11 @@ function CTASection() {
           <p className="text-[var(--text-secondary)] mb-8 max-w-lg mx-auto">
             从今天开始，告别通宵赶标书的噩梦。让 AI 成为你最强大的投标武器。
           </p>
-          <button className="btn-glow !px-10 !py-4 !text-base !rounded-xl flex items-center gap-2 mx-auto">
+          <Link href="/workspace/new" className="btn-glow !px-10 !py-4 !text-base !rounded-xl flex items-center gap-2 mx-auto">
             <Sparkles className="w-5 h-5" />
             免费试用 · 无需信用卡
             <ArrowRight className="w-4 h-4" />
-          </button>
+          </Link>
         </div>
       </motion.div>
     </AnimatedSection>
