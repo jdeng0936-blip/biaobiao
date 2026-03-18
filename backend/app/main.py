@@ -53,7 +53,7 @@ app.include_router(project_router)
 
 
 # 导入所有 ORM Model（确保 Base.metadata 包含所有表）
-import app.models  # noqa: F401
+from app.models import Project, User, DesensitizeEntry, StructuredTable  # noqa: F401
 
 
 @app.on_event("startup")
