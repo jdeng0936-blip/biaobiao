@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Plus,
@@ -20,50 +20,14 @@ import {
   BookOpen,
   Shield,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 
-/* ========================================
-   Mock 数据
-   ======================================== */
-const mockProjects = [
-  {
-    id: "1",
-    name: "XX市政道路工程技术标",
-    type: "工程类",
-    status: "generating",
-    step: 4,
-    updatedAt: "10 分钟前",
-    score: null,
-  },
-  {
-    id: "2",
-    name: "高新区智慧园区建设项目",
-    type: "工程类",
-    status: "reviewing",
-    step: 5,
-    updatedAt: "1 小时前",
-    score: 87.5,
-  },
-  {
-    id: "3",
-    name: "城市供水管网改造工程",
-    type: "工程类",
-    status: "completed",
-    step: 5,
-    updatedAt: "昨天",
-    score: 92.3,
-  },
-  {
-    id: "4",
-    name: "办公设备采购服务标",
-    type: "货物类",
-    status: "draft",
-    step: 1,
-    updatedAt: "3 天前",
-    score: null,
-  },
-];
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
 
+/* ========================================
+   状态映射
+   ======================================== */
 const statusMap: Record<string, { label: string; color: string; bg: string }> = {
   draft: { label: "草稿", color: "var(--text-tertiary)", bg: "rgba(113,113,122,0.12)" },
   parsing: { label: "解析中", color: "var(--accent-blue)", bg: "rgba(59,130,246,0.12)" },
@@ -78,12 +42,69 @@ const fadeInUp = {
 };
 
 /* ========================================
+   项目类型定义
+   ======================================== */
+interface ProjectItem {
+  id: string;
+  name: string;
+  project_type: string;
+  status: string;
+  progress: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/* ========================================
    Dashboard 页面
    ======================================== */
 export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
+  const [stats, setStats] = useState({ total: 0, in_progress: 0, completed: 0 });
+  const [loading, setLoading] = useState(true);
 
-  const filteredProjects = mockProjects.filter((p) =>
+  // 从 API 拉取项目列表和统计
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [projRes, statsRes] = await Promise.all([
+          fetch(`${API_BASE}/projects`),
+          fetch(`${API_BASE}/projects/stats`),
+        ]);
+        if (projRes.ok) setProjects(await projRes.json());
+        if (statsRes.ok) setStats(await statsRes.json());
+      } catch (e) {
+        console.error("拉取项目数据失败:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // 时间格式化
+  const formatTime = (iso: string) => {
+    if (!iso) return "";
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "刚刚";
+    if (mins < 60) return `${mins} 分钟前`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours} 小时前`;
+    const days = Math.floor(hours / 24);
+    return `${days} 天前`;
+  };
+
+  // 项目类型映射
+  const typeLabel = (t: string) => {
+    const map: Record<string, string> = {
+      municipal_road: "工程类", building: "工程类", water: "工程类",
+      SERVICE_BID_DOC: "服务类", GOODS_BID_DOC: "货物类", NORMAL_BID_DOC: "工程类",
+    };
+    return map[t] || "工程类";
+  };
+
+  const filteredProjects = projects.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -158,10 +179,10 @@ export default function DashboardPage() {
           className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
         >
           {[
-            { label: "进行中项目", value: "2", icon: FolderOpen, trend: null },
-            { label: "本月投标", value: "7", icon: FileText, trend: "+3" },
-            { label: "平均 AI 评分", value: "89.9", icon: TrendingUp, trend: "+5.2" },
-            { label: "AI 用量", value: "12.4K", icon: Zap, trend: "Token" },
+            { label: "进行中项目", value: String(stats.in_progress), icon: FolderOpen, trend: null },
+            { label: "总项目数", value: String(stats.total), icon: FileText, trend: null },
+            { label: "已完成", value: String(stats.completed), icon: TrendingUp, trend: null },
+            { label: "AI 用量", value: "--", icon: Zap, trend: null },
           ].map((stat, i) => (
             <motion.div
               key={i}
@@ -249,34 +270,26 @@ export default function DashboardPage() {
                     {project.name}
                   </h3>
                   <div className="flex items-center gap-3 mt-1.5">
-                    <span className="text-xs text-[var(--text-tertiary)]">{project.type}</span>
+                    <span className="text-xs text-[var(--text-tertiary)]">{typeLabel(project.project_type)}</span>
                     <span className="text-xs text-[var(--text-tertiary)]">·</span>
                     <span className="text-xs text-[var(--text-tertiary)] flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {project.updatedAt}
+                      {formatTime(project.updated_at)}
                     </span>
                     <span className="text-xs text-[var(--text-tertiary)]">·</span>
                     <span className="text-xs text-[var(--text-tertiary)]">
-                      Step {project.step}/5
+                      进度 {project.progress}%
                     </span>
                   </div>
                 </div>
 
                 {/* 状态标签 */}
                 <div className="flex items-center gap-3">
-                  {project.score !== null && (
-                    <div className="flex items-center gap-1.5">
-                      <BarChart3 className="w-3.5 h-3.5 text-[var(--primary)]" />
-                      <span className="text-sm font-semibold text-[var(--primary)]">
-                        {project.score}
-                      </span>
-                    </div>
-                  )}
                   <span
                     className="px-3 py-1 rounded-full text-xs font-medium"
-                    style={{ color: status.color, background: status.bg }}
+                    style={{ color: status?.color || 'var(--text-tertiary)', background: status?.bg || 'rgba(113,113,122,0.12)' }}
                   >
-                    {status.label}
+                    {status?.label || project.status}
                   </span>
                   <ChevronRight className="w-4 h-4 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity" />
                   <button

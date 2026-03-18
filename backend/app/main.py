@@ -24,6 +24,7 @@ from app.api.v1.anti_review import router as anti_review_router
 from app.api.v1.export import router as export_router
 from app.api.v1.scoring import router as scoring_router
 from app.api.v1.upload import router as upload_router
+from app.api.v1.project import router as project_router
 
 app = FastAPI(
     title="标标 AI API",
@@ -48,6 +49,7 @@ app.include_router(anti_review_router)
 app.include_router(export_router)
 app.include_router(scoring_router)
 app.include_router(upload_router)
+app.include_router(project_router)
 
 
 @app.get("/api/health")

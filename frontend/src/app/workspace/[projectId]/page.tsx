@@ -544,13 +544,19 @@ function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: str
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
 
-  const sections = [
+  // 默认章节（Step3 未生成时的 fallback）
+  const DEFAULT_SECTIONS = [
     { id: "3-1", title: "3.1 工程概况", type: "overview" },
     { id: "3-2", title: "3.2 施工组织设计", type: "technical" },
     { id: "3-3", title: "3.3 施工进度计划", type: "schedule" },
     { id: "3-4", title: "3.4 质量保证措施", type: "quality" },
     { id: "3-5", title: "3.5 安全文明施工", type: "safety" },
   ];
+
+  // 从 Zustand store 读取 Step3 生成的大纲，如无则使用默认
+  const sections = store.outlineSections.length > 0
+    ? store.outlineSections.map(s => ({ id: s.id, title: s.title, type: s.type }))
+    : DEFAULT_SECTIONS;
 
   // 检测文字选中 → 弹出浮动工具栏
   const handleTextSelect = useCallback((sectionTitle: string) => {
@@ -622,8 +628,8 @@ function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: str
         body: JSON.stringify({
           section_title: sectionTitle,
           section_type: sectionType,
-          project_name: "XX市政道路改造工程",
-          project_type: "市政道路",
+          project_name: store.projectName || "标书项目",
+          project_type: store.industry || "市政道路",
           use_rag: true,
           rag_top_k: 5,
         }),
@@ -838,8 +844,17 @@ function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: str
 
 
       <button disabled={!!generatingId}
+        onClick={async () => {
+          // 一键串行生成所有未生成的章节
+          for (const sec of sections) {
+            if (!generatedContent[sec.id]) {
+              await handleGenerate(sec.id, sec.title, sec.type);
+            }
+          }
+        }}
         className="w-full py-3 rounded-xl bg-gradient-to-r from-[var(--primary)] to-[var(--accent-violet)] text-white text-sm font-semibold hover:brightness-110 transition-all disabled:opacity-40 flex items-center justify-center gap-2">
-        <Brain className="w-4 h-4" /> 一键生成全部章节（RAG 增强）
+        <Brain className="w-4 h-4" />
+        {generatingId ? '正在生成中...' : `一键生成全部章节（${sections.filter(s => !generatedContent[s.id]).length} 个待生成）`}
       </button>
     </div>
   );
