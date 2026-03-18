@@ -58,7 +58,7 @@ class AntiReviewService:
     @property
     def conn(self):
         if self._conn is None or self._conn.closed:
-            self._conn = psycopg2.connect(self.db_url)
+            self._conn = psycopg2.connect(self.db_url.replace("+asyncpg", ""))
         return self._conn
 
     # ============================================================

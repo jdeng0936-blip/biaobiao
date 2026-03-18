@@ -637,7 +637,7 @@ class PgVectorStore:
         self.vector_dims = vector_dims
         try:
             import psycopg2
-            self.conn = psycopg2.connect(db_url)
+            self.conn = psycopg2.connect(db_url.replace("+asyncpg", ""))
             self.conn.autocommit = True
             logger.info("  ✅ 数据库连接成功")
         except Exception as e:

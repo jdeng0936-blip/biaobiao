@@ -41,13 +41,22 @@ class GeminiProvider(BaseLLMProvider):
         if not self.is_ready():
             raise RuntimeError("Gemini Provider 未就绪")
 
-        # 合并 system + user prompt（Gemini 不原生支持 system role）
-        combined = system_prompt + "\n\n" + user_prompt
+        import asyncio
 
-        response = self.client.models.generate_content(
-            model=config.model_name,
-            contents=[{"role": "user", "parts": [{"text": combined}]}],
-        )
+        # 合并 system + user prompt（Gemini 有专用的 system_instruction config）
+        from google.genai import types
+        config_obj = types.GenerateContentConfig()
+        if system_prompt:
+            config_obj.system_instruction = system_prompt
+
+        def _do_gen():
+            return self.client.models.generate_content(
+                model=config.model_name,
+                contents=user_prompt,
+                config=config_obj
+            )
+
+        response = await asyncio.to_thread(_do_gen)
 
         return LLMResponse(
             text=response.text or "",
@@ -64,14 +73,32 @@ class GeminiProvider(BaseLLMProvider):
         if not self.is_ready():
             raise RuntimeError("Gemini Provider 未就绪")
 
-        combined = system_prompt + "\n\n" + user_prompt
+        from google.genai import types
+        import asyncio
 
-        response = self.client.models.generate_content_stream(
-            model=config.model_name,
-            contents=[{"role": "user", "parts": [{"text": combined}]}],
-        )
+        config_obj = types.GenerateContentConfig()
+        if system_prompt:
+            config_obj.system_instruction = system_prompt
 
-        for chunk in response:
+        def _do_stream():
+            return self.client.models.generate_content_stream(
+                model=config.model_name,
+                contents=user_prompt,
+                config=config_obj
+            )
+
+        stream_iter = await asyncio.to_thread(_do_stream)
+
+        def get_next(i):
+            try:
+                return next(i)
+            except StopIteration:
+                return None
+
+        while True:
+            chunk = await asyncio.to_thread(get_next, stream_iter)
+            if chunk is None:
+                break
             if chunk.text:
                 yield chunk.text
 

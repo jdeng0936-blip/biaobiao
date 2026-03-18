@@ -63,11 +63,12 @@ async def upload_document(file: UploadFile = File(...)):
             "postgresql://mac111@localhost:5432/biaobiao"
         )
 
-        # 不做向量化（上传时仅切片入库，向量化可后续批量执行）
+        # 开启真实的 Gemini 向量化存入 pgvector
         pipeline = ChunkingPipeline(
             max_chunk_size=800,
             min_chunk_size=100,
-            vectorize=False,
+            vectorize=True,
+            engine="gemini",
             db_url=db_url,
         )
 

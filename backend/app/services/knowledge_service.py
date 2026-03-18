@@ -18,10 +18,11 @@ class KnowledgeService:
     """知识库三层检索核心服务"""
 
     def __init__(self, db_url: str = None):
-        self.db_url = db_url or os.getenv(
+        raw_url = db_url or os.getenv(
             "DATABASE_URL",
             "postgresql://mac111@localhost:5432/biaobiao"
         )
+        self.db_url = raw_url.replace("+asyncpg", "")
         self._conn = None
 
     @property
