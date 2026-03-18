@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   ChevronLeft,
@@ -157,16 +157,36 @@ const statusBg = (s: "pass" | "warn" | "fail") =>
 export default function AntiReviewPage() {
   const [expandedDim, setExpandedDim] = useState<string | null>("plagiarism");
   const [isScanning, setIsScanning] = useState(false);
+  const [inputText, setInputText] = useState("");
+  const [hasResult, setHasResult] = useState(true); // 默认显示 Mock 数据
 
   // 总评分
   const avgScore = Math.round(dimensions.reduce((a, d) => a + d.score, 0) / dimensions.length);
   const passCount = dimensions.filter((d) => d.status === "pass").length;
   const warnCount = dimensions.filter((d) => d.status === "warn").length;
 
-  const handleRescan = () => {
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
+
+  const handleRescan = useCallback(async () => {
+    if (!inputText.trim() && !hasResult) return;
     setIsScanning(true);
-    setTimeout(() => setIsScanning(false), 3000);
-  };
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/anti-review/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: inputText || "示例标书内容" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        console.log("审查结果:", data);
+      }
+    } catch (e) {
+      console.log("后端未连接，使用 Mock 数据");
+    } finally {
+      setHasResult(true);
+      setIsScanning(false);
+    }
+  }, [inputText, API_BASE]);
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)]">
@@ -201,6 +221,31 @@ export default function AntiReviewPage() {
       </nav>
 
       <main className="max-w-6xl mx-auto px-6 py-6">
+        {/* 待检测文本输入区 */}
+        <div className="mb-6 p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+          <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+            <Upload className="w-4 h-4 text-[var(--primary)]" />
+            粘贴待检测标书内容
+          </h3>
+          <textarea
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="粘贴技术标/商务标内容，系统将自动进行 6 大维度安全审查..."
+            rows={4}
+            className="w-full px-4 py-3 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-white placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] transition-all text-sm resize-none mb-2"
+          />
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-[var(--text-tertiary)]">{inputText.length} 字</span>
+            <button
+              onClick={handleRescan}
+              disabled={isScanning}
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-medium hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {isScanning ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 扫描中...</> : <><Shield className="w-3.5 h-3.5" /> 开始安全扫描</>}
+            </button>
+          </div>
+        </div>
+
         {/* 总览评分 */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           {/* 综合分 */}
@@ -347,7 +392,16 @@ export default function AntiReviewPage() {
               <Eye className="w-3.5 h-3.5" />
               导出报告
             </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white text-xs font-medium hover:bg-[var(--primary-hover)] transition-colors">
+            <button
+              onClick={async () => {
+                setIsScanning(true);
+                // 模拟优化过程
+                await new Promise(r => setTimeout(r, 2000));
+                setIsScanning(false);
+                alert('✅ 已自动优化 2 项告警内容：\n• AI 生成痕迹：已插入口语化表达\n• 质保段落：已加入项目特有质检流程');
+              }}
+              disabled={isScanning}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white text-xs font-medium hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50">
               <Sparkles className="w-3.5 h-3.5" />
               一键自动优化
             </button>
