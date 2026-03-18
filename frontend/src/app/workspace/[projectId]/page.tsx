@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
+import { useProjectStore } from "@/store/useProjectStore";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -74,9 +75,10 @@ const mockMessages = [
    Step 1 — 标书设置
    ======================================== */
 function Step1Form() {
-  const [bidType, setBidType] = useState("NORMAL_BID_DOC");
-  const [projectName, setProjectName] = useState("");
-  const [industry, setIndustry] = useState("municipal_road");
+  const store = useProjectStore();
+  const [bidType, setBidType] = useState(store.bidType || "NORMAL_BID_DOC");
+  const [projectName, setProjectName] = useState(store.projectName || "");
+  const [industry, setIndustry] = useState(store.industry || "municipal_road");
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -96,7 +98,7 @@ function Step1Form() {
           ].map((type) => (
             <button
               key={type.value}
-              onClick={() => setBidType(type.value)}
+              onClick={() => { setBidType(type.value); store.setProjectInfo(projectName, type.value, industry); }}
               className={`p-4 rounded-xl border text-left transition-all ${
                 bidType === type.value
                   ? "border-[var(--primary)] bg-[var(--primary-glow)]"
@@ -116,7 +118,7 @@ function Step1Form() {
         <input
           type="text"
           value={projectName}
-          onChange={(e) => { setProjectName(e.target.value); if (typeof window !== "undefined") localStorage.setItem("bidgen_project_name", e.target.value); }}
+          onChange={(e) => { setProjectName(e.target.value); store.setProjectInfo(e.target.value, bidType, industry); }}
           placeholder="如：XX市政道路改造工程施工标"
           className="w-full px-4 py-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-white placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] transition-all text-sm"
         />
@@ -127,7 +129,7 @@ function Step1Form() {
         <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">工程行业</label>
         <select
           value={industry}
-          onChange={(e) => setIndustry(e.target.value)}
+          onChange={(e) => { setIndustry(e.target.value); store.setProjectInfo(projectName, bidType, e.target.value); }}
           className="w-full px-4 py-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-white focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] transition-all text-sm appearance-none"
         >
           <option value="municipal_road">市政道路工程</option>
@@ -172,6 +174,7 @@ function Step1Form() {
    Step 2 — 招标文件解读
    ======================================== */
 function Step2Upload() {
+  const { addUploadedFile } = useProjectStore();
   const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState(0);
@@ -217,6 +220,8 @@ function Step2Upload() {
         const data = await res.json();
         setResult(data);
         setUploadState('done');
+        // 同步到全局 store
+        addUploadedFile({ name: file.name, size: file.size, chunksCreated: data.chunks_created || 0 });
       } else {
         const err = await res.json().catch(() => ({ detail: '上传失败' }));
         setErrorMsg(err.detail || '上传失败');
@@ -351,16 +356,15 @@ function Step2Upload() {
    Step 3 — 目录占位
    ======================================== */
 function Step3Placeholder() {
+  const store = useProjectStore();
   const [bidDocText, setBidDocText] = useState("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [scoringResult, setScoringResult] = useState<any>(null);
   const [outline, setOutline] = useState<any[]>([]);
   const API_BASE = "http://localhost:8000";
 
-  // 从 localStorage 获取项目背景
-  const projectContext = typeof window !== "undefined"
-    ? localStorage.getItem("bidgen_project_name") || ""
-    : "";
+  // 从 Zustand store 获取项目背景
+  const projectContext = store.projectName || "";
 
   // 一键提取评分点 + 生成目录
   const handleGenerate = async () => {
@@ -381,11 +385,12 @@ function Step3Placeholder() {
         const data = await res.json();
         setScoringResult(data.scoring);
         setOutline(data.outline || []);
-        // 保存目录到 localStorage 供 Step4 使用
-        if (typeof window !== "undefined") {
-          localStorage.setItem("bidgen_outline", JSON.stringify(data.outline || []));
-          localStorage.setItem("bidgen_scoring", JSON.stringify(data.scoring || {}));
-        }
+        // 同步到 Zustand store 供 Step4 使用
+        store.setOutline((data.outline || []).map((s: any, i: number) => ({
+          id: s.id || `sec-${i}`,
+          title: s.title || '',
+          type: s.type || 'overview',
+        })));
       }
     } catch (e) {
       console.error('评分点提取失败:', e);
@@ -516,24 +521,17 @@ function Step3Placeholder() {
 const STORAGE_KEY = "bidgen_generated_content";
 
 function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: string, sectionTitle: string, moduleContent?: string) => void }) {
+  const store = useProjectStore();
   const [generatingId, setGeneratingId] = useState<string | null>(null);
-  // 从 localStorage 恢复已生成内容
-  const [generatedContent, setGeneratedContent] = useState<Record<string, string>>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        return saved ? JSON.parse(saved) : {};
-      } catch { return {}; }
-    }
-    return {};
-  });
+  // 从 Zustand store 恢复已生成内容
+  const [generatedContent, setGeneratedContent] = useState<Record<string, string>>(store.generatedContent || {});
   const [ragStatus, setRagStatus] = useState<string>("");
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // 生成内容变化时自动保存到 localStorage
+  // 生成内容变化时同步到 Zustand store
   useEffect(() => {
     if (Object.keys(generatedContent).length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(generatedContent));
+      Object.entries(generatedContent).forEach(([k, v]) => store.setGeneratedContent(k, v));
     }
   }, [generatedContent]);
 
@@ -856,18 +854,11 @@ function Step5ReviewExport() {
   const [isExporting, setIsExporting] = useState(false);
   const API_BASE = "http://localhost:8000";
 
-  // 从 localStorage 读取已生成内容和项目名（与 Step4/Step1 共享）
-  const generatedContent: Record<string, string> = (() => {
-    if (typeof window === "undefined") return {};
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
-  })();
+  // 从 Zustand store 读取已生成内容和项目名（与 Step4/Step1 共享）
+  const storeState = useProjectStore();
+  const generatedContent: Record<string, string> = storeState.generatedContent || {};
 
-  const projectName = typeof window !== "undefined"
-    ? localStorage.getItem("bidgen_project_name") || "标书项目"
-    : "标书项目";
+  const projectName = storeState.projectName || "标书项目";
 
   // 获取有内容的章节
   const contentSections = Object.entries(generatedContent).filter(([, v]) => v && v.trim().length > 50);
