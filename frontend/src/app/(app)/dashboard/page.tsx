@@ -110,43 +110,16 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)]">
-      {/* TopBar */}
+      {/* TopBar — 精简版（导航已在侧边栏） */}
       <nav className="sticky top-0 z-40 glass border-b border-[var(--border-subtle)]">
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--accent-violet)] flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-bold tracking-tight">标标 AI</span>
-            </div>
-            {/* 导航链接 */}
-            <div className="hidden md:flex items-center gap-1">
-              {[
-                { label: "项目", href: "/dashboard", active: true },
-                { label: "资料库", href: "/library" },
-                { label: "工艺图谱", href: "/craft-library" },
-                { label: "变体引擎", href: "/variants" },
-                { label: "反审标", href: "/anti-review" },
-              ].map((nav) => (
-                <a
-                  key={nav.label}
-                  href={nav.href}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    nav.active
-                      ? "bg-[var(--bg-surface)] text-white"
-                      : "text-[var(--text-tertiary)] hover:text-white hover:bg-[var(--bg-surface)]"
-                  }`}
-                >
-                  {nav.label}
-                </a>
-              ))}
-            </div>
+        <div className="px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h2 className="font-bold text-sm">工作台</h2>
           </div>
 
           <div className="flex items-center gap-4">
             {/* 搜索 */}
-            <div className="relative hidden md:block">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-tertiary)]" />
               <input
                 type="text"
@@ -162,9 +135,6 @@ export default function DashboardPage() {
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent-violet)] flex items-center justify-center text-xs font-bold text-white">
                 张
               </div>
-              <button className="text-[var(--text-tertiary)] hover:text-white transition-colors">
-                <LogOut className="w-4 h-4" />
-              </button>
             </div>
           </div>
         </div>

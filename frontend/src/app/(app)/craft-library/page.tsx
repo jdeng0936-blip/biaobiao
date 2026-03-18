@@ -243,19 +243,14 @@ export default function CraftLibraryPage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)]">
-      {/* TopBar */}
+      {/* TopBar — 精简版 */}
       <nav className="sticky top-0 z-40 glass border-b border-[var(--border-subtle)]">
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => (window.location.href = "/dashboard")} className="text-[var(--text-tertiary)] hover:text-white transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-                <BookOpen className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-bold tracking-tight">施工工艺图谱</span>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+              <BookOpen className="w-4 h-4 text-white" />
             </div>
+            <span className="font-bold tracking-tight text-sm">施工工艺图谱</span>
             <span className="text-xs text-[var(--text-tertiary)] px-2 py-0.5 rounded-full bg-[var(--bg-surface)]">
               市政 + 房建
             </span>

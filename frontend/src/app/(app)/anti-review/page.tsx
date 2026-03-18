@@ -190,19 +190,14 @@ export default function AntiReviewPage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)]">
-      {/* TopBar */}
+      {/* TopBar — 精简版 */}
       <nav className="sticky top-0 z-40 glass border-b border-[var(--border-subtle)]">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div className="px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <a href="/dashboard" className="text-[var(--text-tertiary)] hover:text-white transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-            </a>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                <Shield className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-bold tracking-tight">反审标检测</span>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+              <Shield className="w-4 h-4 text-white" />
             </div>
+            <span className="font-bold tracking-tight text-sm">反审标检测</span>
             <span className="text-xs text-[var(--text-tertiary)] px-2 py-0.5 rounded-full bg-[var(--bg-surface)]">
               XX市政道路工程
             </span>
