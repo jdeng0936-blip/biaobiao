@@ -69,8 +69,13 @@ async def startup_event():
         await conn.run_sync(Base.metadata.create_all)
 
 
+@app.get("/health", tags=["公共接口"])
+async def health_check_root():
+    """系统健康检查"""
+    return {"status": "ok", "service": "biaobiao-api", "version": "1.0.0"}
+
+
 @app.get("/api/health")
 async def health_check():
     """健康检查端点"""
     return {"status": "ok", "service": "标标 AI API", "version": "0.3.0"}
-

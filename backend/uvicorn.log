@@ -1,0 +1,52 @@
+INFO:     Started server process [15230]
+INFO:     Waiting for application startup.
+2026-03-18 21:52:49,509 INFO sqlalchemy.engine.Engine select pg_catalog.version()
+2026-03-18 21:52:49,509 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-03-18 21:52:49,511 INFO sqlalchemy.engine.Engine select current_schema()
+2026-03-18 21:52:49,511 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-03-18 21:52:49,513 INFO sqlalchemy.engine.Engine show standard_conforming_strings
+2026-03-18 21:52:49,513 INFO sqlalchemy.engine.Engine [raw sql] ()
+2026-03-18 21:52:49,514 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-03-18 21:52:49,516 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-18 21:52:49,516 INFO sqlalchemy.engine.Engine [generated in 0.00011s] ('users', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-18 21:52:49,521 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-18 21:52:49,521 INFO sqlalchemy.engine.Engine [cached since 0.004253s ago] ('projects', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-18 21:52:49,521 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-18 21:52:49,521 INFO sqlalchemy.engine.Engine [cached since 0.004931s ago] ('desensitize_dict', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-18 21:52:49,522 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-18 21:52:49,522 INFO sqlalchemy.engine.Engine [cached since 0.00546s ago] ('structured_tables', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-18 21:52:49,522 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     127.0.0.1:56595 - "GET /health HTTP/1.1" 200 OK
+2026-03-18 21:52:51,799 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-03-18 21:52:51,800 INFO sqlalchemy.engine.Engine INSERT INTO projects (id, name, project_type, status, description, bid_deadline, progress, tenant_id, created_at, updated_at, created_by) VALUES ($1::UUID, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::TIMESTAMP WITH TIME ZONE, $7::INTEGER, $8::VARCHAR, $9::TIMESTAMP WITH TIME ZONE, $10::TIMESTAMP WITH TIME ZONE, $11::VARCHAR)
+2026-03-18 21:52:51,800 INFO sqlalchemy.engine.Engine [generated in 0.00014s] (UUID('bab6b67e-c4fd-452f-af98-156c5cae906d'), 'E2E 自动化测试项目 - f1caba', 'municipal_road', 'draft', None, None, 0, 'demo_tenant', datetime.datetime(2026, 3, 18, 13, 52, 51, 800667, tzinfo=datetime.timezone.utc), datetime.datetime(2026, 3, 18, 13, 52, 51, 800669, tzinfo=datetime.timezone.utc), None)
+2026-03-18 21:52:51,810 INFO sqlalchemy.engine.Engine COMMIT
+2026-03-18 21:52:51,813 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-03-18 21:52:51,814 INFO sqlalchemy.engine.Engine SELECT projects.id, projects.name, projects.project_type, projects.status, projects.description, projects.bid_deadline, projects.generated_sections, projects.progress, projects.tenant_id, projects.created_at, projects.updated_at, projects.created_by 
+FROM projects 
+WHERE projects.id = $1::UUID
+2026-03-18 21:52:51,814 INFO sqlalchemy.engine.Engine [generated in 0.00009s] (UUID('bab6b67e-c4fd-452f-af98-156c5cae906d'),)
+INFO:     127.0.0.1:56597 - "POST /projects HTTP/1.1" 200 OK
+2026-03-18 21:52:51,818 INFO sqlalchemy.engine.Engine COMMIT
+2026-03-18 21:52:51,820 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-03-18 21:52:51,821 INFO sqlalchemy.engine.Engine SELECT projects.id, projects.name, projects.project_type, projects.status, projects.description, projects.bid_deadline, projects.generated_sections, projects.progress, projects.tenant_id, projects.created_at, projects.updated_at, projects.created_by 
+FROM projects 
+WHERE projects.tenant_id = $1::VARCHAR ORDER BY projects.updated_at DESC
+2026-03-18 21:52:51,821 INFO sqlalchemy.engine.Engine [generated in 0.00008s] ('demo_tenant',)
+INFO:     127.0.0.1:56599 - "GET /projects HTTP/1.1" 200 OK
+2026-03-18 21:52:51,823 INFO sqlalchemy.engine.Engine COMMIT
+INFO:     127.0.0.1:56601 - "GET /craft/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56603 - "GET /variants/dimensions HTTP/1.1" 200 OK
+基线计算失败: invalid dsn: missing "=" after "postgresql+asyncpg://biaobiao:biaobiao123@localhost:5434/biaobiao" in connection info string
+
+INFO:     127.0.0.1:56605 - "POST /api/v1/anti-review/check HTTP/1.1" 200 OK
