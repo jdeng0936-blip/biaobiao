@@ -1,0 +1,94 @@
+# ============================================================
+# LLM 模型注册表 — 动态路由配置中心
+# ============================================================
+# 所有 LLM 调用必须通过 LLMSelector 路由，禁止硬编码模型名。
+# 先期仅配置 Gemini + OpenAI 云端 Provider，后期可扩展本地 Ollama。
+
+# 默认配置
+defaults:
+  temperature: 0.3
+  max_output_tokens: 4096
+  timeout_seconds: 60
+
+# ============================================================
+# 任务 → 模型映射
+# ============================================================
+tasks:
+  # 标书章节生成（长文本，需要强推理）
+  bid_generate:
+    primary: gemini-2.5-flash
+    fallback: gpt-4o-mini
+    temperature: 0.3
+    max_output_tokens: 8192
+    description: "标书章节内容生成，长文本输出"
+
+  # AI Chat 模块提问（短回答，速度优先）
+  bid_chat:
+    primary: gemini-2.5-flash-lite
+    fallback: gpt-4o-mini
+    temperature: 0.4
+    max_output_tokens: 1024
+    description: "模块精准问答，简洁回复"
+
+  # 引申提问生成（极轻量）
+  suggestions:
+    primary: gemini-2.5-flash-lite
+    fallback: gpt-4o-mini
+    temperature: 0.6
+    max_output_tokens: 256
+    description: "生成 2-3 个引申提问"
+
+  # 反 AI 改写（必须用不同源模型）
+  anti_rewrite:
+    primary: gpt-4o-mini
+    fallback: gemini-2.5-flash
+    temperature: 0.7
+    max_output_tokens: 4096
+    description: "反 AI 检测改写，必须用不同于生成模型的模型族"
+
+  # 向量化
+  embedding:
+    primary: gemini-embedding-001
+    fallback: text-embedding-3-small
+    description: "文本向量化"
+
+  # NER 脱敏（后期可切换为本地模型）
+  desensitize:
+    primary: gemini-2.5-flash-lite
+    fallback: gpt-4o-mini
+    temperature: 0.1
+    max_output_tokens: 512
+    description: "命名实体识别与脱敏"
+
+  # 表格分类
+  classify:
+    primary: gemini-2.5-flash-lite
+    fallback: gpt-4o-mini
+    temperature: 0.1
+    max_output_tokens: 256
+    description: "表格类型分类与标签提取"
+
+# ============================================================
+# Provider 配置
+# ============================================================
+providers:
+  gemini:
+    api_key_env: GEMINI_API_KEY
+    models:
+      - gemini-2.5-flash
+      - gemini-2.5-flash-lite
+      - gemini-embedding-001
+
+  openai:
+    api_key_env: OPENAI_API_KEY
+    base_url: null  # 默认官方，可改为代理
+    models:
+      - gpt-4o-mini
+      - text-embedding-3-small
+
+  # 后期扩展：本地 Ollama
+  # ollama:
+  #   base_url: http://localhost:11434
+  #   models:
+  #     - qwen2.5-7b
+  #     - glm4-9b
