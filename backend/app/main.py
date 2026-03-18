@@ -25,6 +25,8 @@ from app.api.v1.export import router as export_router
 from app.api.v1.scoring import router as scoring_router
 from app.api.v1.upload import router as upload_router
 from app.api.v1.project import router as project_router
+from app.api.v1.craft import router as craft_router
+from app.api.v1.variant import router as variant_router
 
 app = FastAPI(
     title="标标 AI API",
@@ -50,6 +52,8 @@ app.include_router(export_router)
 app.include_router(scoring_router)
 app.include_router(upload_router)
 app.include_router(project_router)
+app.include_router(craft_router)
+app.include_router(variant_router)
 
 
 # 导入所有 ORM Model（确保 Base.metadata 包含所有表）
