@@ -171,22 +171,16 @@ export default function AntiReviewPage() {
     if (!inputText.trim() && !hasResult) return;
     setIsScanning(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/anti-review/check`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: inputText || "示例标书内容" }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        console.log("审查结果:", data);
-      }
+      const { checkAntiReview } = await import('@/lib/api');
+      const data = await checkAntiReview(inputText || "示例标书内容");
+      console.log("审查结果:", data);
     } catch (e) {
       console.log("后端未连接，使用 Mock 数据");
     } finally {
       setHasResult(true);
       setIsScanning(false);
     }
-  }, [inputText, API_BASE]);
+  }, [inputText]);
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)]">

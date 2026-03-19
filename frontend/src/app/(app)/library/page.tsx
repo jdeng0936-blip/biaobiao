@@ -137,15 +137,13 @@ function AITrainingCenter() {
       setLoading(true);
       setError(null);
       try {
-        const [statsRes, filesRes] = await Promise.all([
-          fetch(`${API_BASE}/api/v1/knowledge/stats`),
-          fetch(`${API_BASE}/api/v1/knowledge/files`),
+        const { getKnowledgeStats, listKnowledgeFiles } = await import('@/lib/api');
+        const [statsData, filesData] = await Promise.all([
+          getKnowledgeStats(),
+          listKnowledgeFiles(),
         ]);
-        if (!statsRes.ok || !filesRes.ok) throw new Error("API 连接失败");
-        const statsData = await statsRes.json();
-        const filesData = await filesRes.json();
-        setStats(statsData.data);
-        setFiles(filesData.files || []);
+        setStats((statsData as any).data || statsData);
+        setFiles((filesData as any).files || filesData || []);
       } catch (e: any) {
         setError(e.message || "加载失败");
       } finally {
@@ -161,18 +159,9 @@ function AITrainingCenter() {
     setSearching(true);
     setSearchDone(false);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/knowledge/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: searchQuery.trim(),
-          top_k: 5,
-          ...(searchFilter ? { doc_section: searchFilter } : {}),
-        }),
-      });
-      if (!res.ok) throw new Error("搜索失败");
-      const data = await res.json();
-      setSearchResults(data.results || []);
+      const { searchKnowledge } = await import('@/lib/api');
+      const data = await searchKnowledge(searchQuery.trim());
+      setSearchResults((data as any).results || []);
       setSearchDone(true);
     } catch {
       setSearchResults([]);

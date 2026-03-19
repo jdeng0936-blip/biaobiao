@@ -634,7 +634,7 @@ function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: str
     : DEFAULT_SECTIONS;
 
   // 提交反馈到数据飞轮 API
-  const submitFeedback = useCallback(async (
+  const handleSubmitFeedback = useCallback(async (
     sectionId: string,
     sectionTitle: string,
     action: 'accept' | 'edit' | 'reject',
@@ -643,23 +643,18 @@ function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: str
   ) => {
     setFeedbackState(prev => ({ ...prev, [sectionId]: 'submitting' }));
     try {
-      const res = await fetch(`${API_BASE}/api/v1/feedback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          section_id: sectionId,
-          section_title: sectionTitle,
-          action,
-          original_text: originalText,
-          revised_text: revisedText || originalText,
-        }),
+      const { submitFeedback: apiFeedback } = await import('@/lib/api');
+      await apiFeedback({
+        section_id: sectionId,
+        section_title: sectionTitle,
+        action,
+        original_text: originalText,
+        revised_text: revisedText || originalText,
       });
-      if (res.ok) {
-        setFeedbackState(prev => ({ ...prev, [sectionId]: action }));
-        if (action === 'edit' && revisedText) {
-          setGeneratedContent(prev => ({ ...prev, [sectionId]: revisedText }));
-          store.setGeneratedContent(sectionId, revisedText);
-        }
+      setFeedbackState(prev => ({ ...prev, [sectionId]: action }));
+      if (action === 'edit' && revisedText) {
+        setGeneratedContent(prev => ({ ...prev, [sectionId]: revisedText }));
+        store.setGeneratedContent(sectionId, revisedText);
       }
     } catch (e) {
       console.error('反馈提交失败:', e);
@@ -1001,7 +996,7 @@ function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: str
                     ) : editingSection === sec.id ? (
                       <>
                         <button
-                          onClick={() => submitFeedback(sec.id, sec.title, 'edit', content, editDraft)}
+                          onClick={() => handleSubmitFeedback(sec.id, sec.title, 'edit', content, editDraft)}
                           className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white text-xs font-medium hover:brightness-110 transition-all"
                         >
                           <Check className="w-3 h-3" /> 提交修改
@@ -1018,7 +1013,7 @@ function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: str
                       <>
                         <span className="text-[10px] text-[var(--text-tertiary)] mr-2">AI 生成质量：</span>
                         <button
-                          onClick={() => submitFeedback(sec.id, sec.title, 'accept', content)}
+                          onClick={() => handleSubmitFeedback(sec.id, sec.title, 'accept', content)}
                           className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--border-default)] text-xs text-[var(--success)] hover:bg-[rgba(34,197,94,0.08)] hover:border-[var(--success)] transition-all"
                         >
                           <ThumbsUp className="w-3 h-3" /> 采纳
@@ -1030,7 +1025,7 @@ function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: str
                           <Pencil className="w-3 h-3" /> 编辑
                         </button>
                         <button
-                          onClick={async () => { await submitFeedback(sec.id, sec.title, 'reject', content); handleGenerate(sec.id, sec.title, sec.type); }}
+                          onClick={async () => { await handleSubmitFeedback(sec.id, sec.title, 'reject', content); handleGenerate(sec.id, sec.title, sec.type); }}
                           className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--border-default)] text-xs text-[var(--danger)] hover:bg-[rgba(239,68,68,0.08)] hover:border-[var(--danger)] transition-all"
                         >
                           <ThumbsDown className="w-3 h-3" /> 拒绝
@@ -1095,15 +1090,9 @@ function Step5ReviewExport() {
         sections[key] = val;
       });
 
-      const res = await fetch(`${API_BASE}/api/v1/anti-review/batch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sections }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setReviewResults(data);
-      }
+      const { batchCheckAntiReview } = await import('@/lib/api');
+      const data = await batchCheckAntiReview(sections);
+      setReviewResults(data);
     } catch (e) {
       console.error('审查失败:', e);
     } finally {
@@ -1122,26 +1111,12 @@ function Step5ReviewExport() {
         sections[key] = val;
       });
 
-      const res = await fetch(`${API_BASE}/api/v1/export/word`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project_name: projectName || '标书项目',
-          sections,
-        }),
+      const { exportWord, downloadBlob } = await import('@/lib/api');
+      const blob = await exportWord({
+        project_name: projectName || '标书项目',
+        sections,
       });
-
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${projectName || '标书项目'}_投标文件.docx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }
+      downloadBlob(blob, `${projectName || '标书项目'}_投标文件.docx`);
     } catch (e) {
       console.error('导出失败:', e);
     } finally {

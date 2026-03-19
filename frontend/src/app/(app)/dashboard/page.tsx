@@ -79,14 +79,15 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [projRes, statsRes, fbRes] = await Promise.all([
-          fetch(`${API_BASE}/projects`),
-          fetch(`${API_BASE}/projects/stats`),
-          fetch(`${API_BASE}/api/v1/feedback/stats`),
+        const { listProjects, getProjectStats, getFeedbackStats } = await import('@/lib/api');
+        const [projData, statsData, fbData] = await Promise.all([
+          listProjects().catch(() => []),
+          getProjectStats().catch(() => ({ total: 0, in_progress: 0, completed: 0 })),
+          getFeedbackStats().catch(() => null),
         ]);
-        if (projRes.ok) setProjects(await projRes.json());
-        if (statsRes.ok) setStats(await statsRes.json());
-        if (fbRes.ok) setFeedbackStats(await fbRes.json());
+        setProjects(projData);
+        setStats(statsData);
+        setFeedbackStats(fbData);
       } catch (e) {
         console.error("拉取项目数据失败:", e);
       } finally {
