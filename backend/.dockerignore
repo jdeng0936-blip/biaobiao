@@ -1,5 +1,11 @@
 __pycache__
 *.pyc
+*.pyo
 .env
 *.log
 .venv
+.pytest_cache
+test_*.py
+e2e_test.py
+uvicorn.log
+.git
