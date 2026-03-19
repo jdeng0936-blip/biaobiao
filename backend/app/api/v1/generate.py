@@ -90,6 +90,7 @@ async def generate_section(req: GenerateRequest):
             section_title=req.section_title,
             section_type=req.section_type,
             project_context=project_context,
+            project_type=req.project_type,
             rag_chunks=rag_chunks,
             user_requirements=req.requirements,
         ):

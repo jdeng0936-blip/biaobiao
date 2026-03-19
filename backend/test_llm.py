@@ -24,16 +24,22 @@ class TestBidGenerateService(unittest.IsolatedAsyncioTestCase):
 
     @patch("app.services.generate_service.get_llm_selector")
     async def test_build_system_prompt(self, mock_get_selector):
-        """系统 Prompt 构建测试"""
+        """系统 Prompt 构建测试 — 含行业词库注入"""
         mock_get_selector.return_value = self.mock_selector
         from app.services.generate_service import BidGenerateService
 
         service = BidGenerateService(tenant_id="test_tenant")
-        prompt = service.build_system_prompt()
 
+        # 基础测试
+        prompt = service.build_system_prompt()
         self.assertIn("标书编写专家", prompt)
         self.assertIn("Markdown", prompt)
         self.assertIn("中文编号", prompt)
+
+        # 行业词库注入测试
+        prompt_with_industry = service.build_system_prompt(project_type="municipal_road")
+        self.assertIn("市政道路工程", prompt_with_industry)
+        self.assertIn("沥青混凝土路面", prompt_with_industry)
 
     @patch("app.services.generate_service.get_llm_selector")
     async def test_build_rag_prompt(self, mock_get_selector):

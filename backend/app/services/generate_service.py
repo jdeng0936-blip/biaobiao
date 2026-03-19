@@ -1,15 +1,20 @@
 """
 标书内容生成服务
-RAG 检索知识库 → 构建 Prompt → LLM Selector 动态路由 → 流式生成
+RAG 检索知识库 → 行业词库注入 → 构建 Prompt → LLM Selector 动态路由 → 流式生成
 """
 import logging
 import json
+import os
+from pathlib import Path
 from typing import Optional, AsyncGenerator
 
 from app.llm.llm_selector import get_llm_selector
 from app.services.desensitize_service import DesensitizeGateway
 
 logger = logging.getLogger("generate_service")
+
+# 行业数据目录
+_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 
 class BidGenerateService:
@@ -42,14 +47,68 @@ class BidGenerateService:
         except Exception:
             return False
 
-    def build_system_prompt(self) -> str:
-        """构建系统 Prompt — 标书专家角色"""
-        return """你是一位资深的标书编写专家，拥有 15 年中国市政/房建工程招投标经验。
+    # ============================================================
+    # 行业词库加载（懒加载 + 缓存）
+    # ============================================================
+    _industry_cache: dict = None
+    _insights_cache: list = None
+
+    @classmethod
+    def _load_industry_data(cls) -> dict:
+        """加载行业词库配置（仅首次访问时读盘）"""
+        if cls._industry_cache is None:
+            fp = _DATA_DIR / "industry_keywords.json"
+            if fp.exists():
+                cls._industry_cache = json.loads(fp.read_text(encoding="utf-8"))
+                logger.info(f"行业词库已加载: {len(cls._industry_cache)} 个行业")
+            else:
+                cls._industry_cache = {}
+                logger.warning(f"行业词库文件不存在: {fp}")
+        return cls._industry_cache
+
+    @classmethod
+    def _load_insights(cls) -> list:
+        """加载高分标书评审洞察种子数据"""
+        if cls._insights_cache is None:
+            fp = _DATA_DIR / "seed_high_score_insights.json"
+            if fp.exists():
+                cls._insights_cache = json.loads(fp.read_text(encoding="utf-8"))
+                logger.info(f"评审洞察已加载: {len(cls._insights_cache)} 条")
+            else:
+                cls._insights_cache = []
+        return cls._insights_cache
+
+    def get_industry_context(self, project_type: str) -> dict:
+        """获取特定行业的完整上下文"""
+        data = self._load_industry_data()
+        return data.get(project_type, {})
+
+    def build_system_prompt(self, project_type: str = "") -> str:
+        """构建系统 Prompt — 标书专家角色 + 行业词库注入"""
+        # 基础角色和能力
+        base = """你是一位资深的标书编写专家，拥有 15 年中国市政/房建工程招投标经验。
 
 ## 核心能力
 - 精通施工组织设计、技术方案、质量管理、安全文明施工等全部标书模块
 - 熟悉最新国标、行标和地方标准
-- 擅长将技术细节转化为评审加分亮点
+- 擅长将技术细节转化为评审加分亮点"""
+
+        # 行业词库注入
+        industry = self.get_industry_context(project_type)
+        industry_section = ""
+        if industry:
+            keywords = "、".join(industry.get("core_keywords", [])[:10])
+            standards = "\n".join(f"  - {s}" for s in industry.get("standards", [])[:3])
+            industry_section = f"""
+
+## 本项目行业领域：{industry.get('label', project_type)}
+### 你必须熟练运用的行业核心术语
+{keywords}
+### 本项目适用的关键规范标准
+{standards}"""
+
+        # 写作规范
+        rules = """
 
 ## 写作规范
 1. 使用专业工程术语，确保符合行业规范
@@ -68,6 +127,8 @@ class BidGenerateService:
 - 列举项目使用中文序号：（1）（2）（3）或 ① ② ③
 - 重要数据直接写入正文，不要加任何装饰符号
 - 整体风格必须像正式打印的标书文档，而非网络文章"""
+
+        return base + industry_section + rules
 
     @staticmethod
     def _parse_json(text: str) -> dict:
@@ -124,8 +185,9 @@ class BidGenerateService:
         scoring_points: list[str] = None,
         planner_outline: str = None,
         review_feedbacks: list[str] = None,
+        project_type: str = "",
     ) -> str:
-        """构建 RAG 增强的生成 Prompt — 融入多节点状态信息"""
+        """构建 RAG 增强的生成 Prompt — 融入行业词库 + 评审洞察 + 多节点状态信息"""
         knowledge_context = ""
         if rag_chunks:
             knowledge_context = "\n\n## 参考知识库（引用时请标注 [REF:编号]）\n"
@@ -155,6 +217,36 @@ class BidGenerateService:
             for i, fb in enumerate(review_feedbacks, 1):
                 review_section += f" - 批评意见 {i}: {fb}\n"
 
+        # 行业评审洞察注入
+        industry_hints = ""
+        industry = self.get_industry_context(project_type)
+        if industry:
+            focus_items = industry.get("scoring_focus", [])
+            deduction_items = industry.get("common_deductions", [])
+            if focus_items:
+                focus_text = "\n".join(f"  - {f}" for f in focus_items[:4])
+                industry_hints += f"\n\n## 行业评审关注点（必须在内容中体现）\n{focus_text}"
+            if deduction_items:
+                deduction_text = "\n".join(f"  - ⚠️ {d}" for d in deduction_items[:3])
+                industry_hints += f"\n\n## 常见扣分陷阱（必须主动规避）\n{deduction_text}"
+
+        # 高分标书评审洞察种子注入
+        insights = self._load_insights()
+        insight_section = ""
+        if insights:
+            # 根据章节类型匹配最相关的洞察
+            type_map = {
+                "technical": "施工组织设计",
+                "quality": "质量管理",
+                "safety": "安全文明施工",
+                "schedule": "进度管理",
+                "overview": "施工组织设计",
+            }
+            target_cat = type_map.get(section_type, "")
+            matched = [i for i in insights if i.get("category") == target_cat]
+            if matched:
+                insight_section = f"\n\n## 专家得分策略（来源: {matched[0].get('source', '行业数据')}\uff09\n{matched[0]['insight']}"
+
         return f"""## 任务
 为你提供以下标书的资料，写出专业、完整的标书内容。
 
@@ -162,7 +254,7 @@ class BidGenerateService:
 - 章节标题: {section_title}
 - 内容类型: {section_type}
 - 项目要求背景: {project_context}
-{knowledge_context}{scoring_section}{user_req_section}{planner_section}{review_section}
+{knowledge_context}{industry_hints}{insight_section}{scoring_section}{user_req_section}{planner_section}{review_section}
 
 ## 格式基座纪律要求（严禁逾越）：
 1. 绝对禁止使用任何 Markdown 语法（#、*、**、```、-、> 等全部禁止），保持公文平滑感。
@@ -178,6 +270,7 @@ class BidGenerateService:
         section_title: str,
         section_type: str = "technical",
         project_context: str = "",
+        project_type: str = "",
         rag_chunks: list[dict] = None,
         user_requirements: str = None,
         scoring_points: list[str] = None,
@@ -224,7 +317,7 @@ class BidGenerateService:
                 yield "data: " + json.dumps({"type": "status", "text": f"✍️ [多智能体管线 输出] - 节点 3:{iter_text} 开始撰写..."}, ensure_ascii=False) + "\n\n"
                 
                 # 构造包含状态机的动态强化 Prompt
-                system_prompt = self.build_system_prompt()
+                system_prompt = self.build_system_prompt(project_type=project_type)
                 user_prompt = self.build_rag_prompt(
                     section_title=section_title,
                     section_type=section_type,
@@ -234,6 +327,7 @@ class BidGenerateService:
                     scoring_points=scoring_points,
                     planner_outline=state["outline"],
                     review_feedbacks=state["review_feedbacks"] if state["iteration"] > 0 else None,
+                    project_type=project_type,
                 )
                 
                 masked_prompt, mapping = self.desensitizer.mask(user_prompt)
