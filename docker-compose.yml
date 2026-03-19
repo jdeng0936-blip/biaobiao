@@ -9,31 +9,54 @@ services:
     image: pgvector/pgvector:pg16
     container_name: biaobiao-pg
     environment:
-      POSTGRES_USER: biaobiao
-      POSTGRES_PASSWORD: biaobiao123
-      POSTGRES_DB: biaobiao
+      POSTGRES_USER: ${PG_USER:-biaobiao}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-biaobiao123}
+      POSTGRES_DB: ${PG_DB:-biaobiao}
     ports:
       - "${PG_PORT:-5434}:5432"
     volumes:
       - biaobiao_pgdata:/var/lib/postgresql/data
       - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U biaobiao"]
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-biaobiao}"]
       interval: 5s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
 
   # ---- Redis ----
   redis:
     image: redis:7-alpine
     container_name: biaobiao-redis
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
     ports:
       - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - biaobiao_redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    restart: unless-stopped
 
   # ---- 后端 API (FastAPI) ----
   backend:
@@ -44,18 +67,26 @@ services:
     ports:
       - "${API_PORT:-8001}:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://biaobiao:biaobiao123@postgres:5432/biaobiao
-      DATABASE_URL_SYNC: postgresql://biaobiao:biaobiao123@postgres:5432/biaobiao
+      DATABASE_URL: postgresql+asyncpg://${PG_USER:-biaobiao}:${PG_PASSWORD:-biaobiao123}@postgres:5432/${PG_DB:-biaobiao}
+      DATABASE_URL_SYNC: postgresql://${PG_USER:-biaobiao}:${PG_PASSWORD:-biaobiao123}@postgres:5432/${PG_DB:-biaobiao}
       REDIS_URL: redis://redis:6379/0
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-biaobiao-ai-secret-key-change-in-production}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - ./backend:/app
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     restart: unless-stopped
 
   # ---- 前端 (Next.js) ----
@@ -70,7 +101,17 @@ services:
       NEXT_PUBLIC_API_BASE: http://localhost:${API_PORT:-8001}
     depends_on:
       - backend
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
     restart: unless-stopped
 
 volumes:
   biaobiao_pgdata:
+  biaobiao_redis:
