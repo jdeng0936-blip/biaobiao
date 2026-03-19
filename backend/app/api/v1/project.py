@@ -19,7 +19,7 @@ def _parse_uuid(project_id: str) -> uuid.UUID:
     """安全解析 UUID，无效则 404"""
     try:
         return uuid.UUID(project_id)
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError, TypeError):
         raise HTTPException(status_code=404, detail="无效的项目 ID")
 
 router = APIRouter(prefix="/projects", tags=["项目管理"])

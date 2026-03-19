@@ -39,6 +39,9 @@ export interface ReviewResult {
 
 /** 项目全局状态 */
 interface ProjectState {
+  // ─── 项目标识 ───
+  projectId: string;         // 后端项目 UUID（new 时为空）
+
   // ─── Step 1: 项目设置 ───
   projectName: string;
   bidType: string;
@@ -64,6 +67,7 @@ interface ProjectState {
   reviewResults: ReviewResult[];
 
   // ─── Actions ───
+  setProjectId: (id: string) => void;
   setProjectInfo: (name: string, bidType: string, industry: string) => void;
   addUploadedFile: (file: { name: string; size: number; chunksCreated: number }) => void;
   setScoringData: (points: ScoringPoint[], totalScore: number) => void;
@@ -77,6 +81,7 @@ interface ProjectState {
    初始状态
    ======================================== */
 const initialState = {
+  projectId: "",
   projectName: "",
   bidType: "",
   industry: "",
@@ -95,6 +100,10 @@ export const useProjectStore = create<ProjectState>()(
   persist(
     (set) => ({
       ...initialState,
+
+      // ─── 项目标识 ───
+      setProjectId: (id) =>
+        set({ projectId: id }),
 
       // ─── Step 1 ───
       setProjectInfo: (name, bidType, industry) =>
@@ -134,6 +143,7 @@ export const useProjectStore = create<ProjectState>()(
       storage: createJSONStorage(() => localStorage),
       // 只持久化关键数据，不持久化中间态
       partialize: (state) => ({
+        projectId: state.projectId,
         projectName: state.projectName,
         bidType: state.bidType,
         industry: state.industry,
