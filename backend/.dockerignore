@@ -1,11 +1,48 @@
-__pycache__
+# ============================================
+# 后端 Docker 构建上下文排除
+# 减少构建上下文体积，加速构建
+# ============================================
+
+# Python 缓存
+__pycache__/
+**/__pycache__/
 *.pyc
 *.pyo
-.env
-*.log
-.venv
-.pytest_cache
+*.pyd
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 测试文件（生产镜像不需要）
 test_*.py
 e2e_test.py
+.pytest_cache/
+htmlcov/
+.coverage
+
+# 环境与密钥
+.env
+.env.*
+
+# 日志
+*.log
 uvicorn.log
-.git
+
+# 版本控制
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 文档
+*.md
+LICENSE
+
+# Alembic 迁移目录（生产通过 CI/CD 管理迁移）
+# alembic/
