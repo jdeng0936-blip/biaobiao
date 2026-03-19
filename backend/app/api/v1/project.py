@@ -14,6 +14,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.project import Project
 
+
+def _parse_uuid(project_id: str) -> uuid.UUID:
+    """安全解析 UUID，无效则 404"""
+    try:
+        return uuid.UUID(project_id)
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=404, detail="无效的项目 ID")
+
 router = APIRouter(prefix="/projects", tags=["项目管理"])
 
 
@@ -122,7 +130,7 @@ async def get_project(project_id: str, db: AsyncSession = Depends(get_db)):
     """获取单个项目详情"""
     result = await db.execute(
         select(Project).where(
-            Project.id == uuid.UUID(project_id),
+            Project.id == _parse_uuid(project_id),
             Project.tenant_id == DEMO_TENANT,
         )
     )
@@ -142,7 +150,7 @@ async def update_project(
     # 先查出来
     result = await db.execute(
         select(Project).where(
-            Project.id == uuid.UUID(project_id),
+            Project.id == _parse_uuid(project_id),
             Project.tenant_id == DEMO_TENANT,
         )
     )
@@ -166,7 +174,7 @@ async def delete_project(project_id: str, db: AsyncSession = Depends(get_db)):
     """删除项目"""
     result = await db.execute(
         select(Project).where(
-            Project.id == uuid.UUID(project_id),
+            Project.id == _parse_uuid(project_id),
             Project.tenant_id == DEMO_TENANT,
         )
     )

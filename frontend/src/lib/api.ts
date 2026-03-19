@@ -254,6 +254,12 @@ export async function updateProject(
   });
 }
 
+export async function deleteProject(projectId: string): Promise<{ detail: string }> {
+  return apiRequest<{ detail: string }>(`/projects/${projectId}`, {
+    method: 'DELETE',
+  });
+}
+
 // ============================================================
 // 反馈飞轮 API
 // ============================================================

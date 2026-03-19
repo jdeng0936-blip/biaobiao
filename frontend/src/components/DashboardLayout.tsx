@@ -12,6 +12,7 @@ import {
   Library,
   ChevronLeft,
   LogOut,
+  MessageSquare,
 } from "lucide-react";
 
 /* ========================================
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", icon: LayoutDashboard, label: "工作台" },
   { href: "/library", icon: Library, label: "知识库" },
   { href: "/craft-library", icon: BookOpen, label: "工艺图谱" },
+  { href: "/ai", icon: MessageSquare, label: "AI 对话" },
   { href: "/variants", icon: Shuffle, label: "变体引擎" },
   { href: "/anti-review", icon: Shield, label: "反审标" },
 ];
