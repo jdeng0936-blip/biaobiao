@@ -1305,6 +1305,7 @@ function AIChatPanel({ onClose, aiContext, onClearContext }: {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
+  const store = useProjectStore();
   // 保存当前模块上下文用于 Chat 请求
   const [chatModuleContent, setChatModuleContent] = useState("");
 
@@ -1371,8 +1372,8 @@ function AIChatPanel({ onClose, aiContext, onClearContext }: {
         body: JSON.stringify({
           module_content: chatModuleContent,
           user_question: text,
-          project_name: "XX市政道路改造工程",
-          project_type: "市政道路",
+          project_name: store.projectName || "标书项目",
+          project_type: store.industry || "municipal_road",
           use_rag: true,
         }),
       });

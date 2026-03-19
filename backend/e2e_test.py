@@ -98,6 +98,35 @@ def main():
     else:
         print_error(f"反审标检测失败: {data}")
 
+    # 7. 反馈飞轮接口 — accept
+    print_step("7. 测试反馈飞轮-采纳 (POST /api/v1/feedback)")
+    status, data = do_request("POST", "/api/v1/feedback", {
+        "section_id": "3-1",
+        "action": "accept",
+        "original_text": "本工程为市政道路改造项目，全长约3.2公里，采用沥青混凝土路面结构。",
+        "section_title": "3.1 工程概况",
+        "tenant_id": "e2e_test",
+    })
+    if status == 200 and data.get("success"):
+        print_success(f"采纳反馈提交成功 | 飞轮触发: {data.get('flywheel_triggered')}")
+    else:
+        print_error(f"反馈提交失败: {data}")
+
+    # 8. 反馈飞轮接口 — edit（触发飞轮下沉）
+    print_step("8. 测试反馈飞轮-编辑 (POST /api/v1/feedback)")
+    status, data = do_request("POST", "/api/v1/feedback", {
+        "section_id": "3-2",
+        "action": "edit",
+        "original_text": "施工组织设计应根据工程特点编制。",
+        "revised_text": "施工组织设计应根据滨海大道二标段工程特点编制，重点关注软基处理和潮汐影响下的混凝土浇筑时间窗口控制，确保养护温度控制在28℃以内。",
+        "section_title": "3.2 施工组织设计",
+        "tenant_id": "e2e_test",
+    })
+    if status == 200 and data.get("success"):
+        print_success(f"编辑反馈提交成功 | 飞轮触发: {data.get('flywheel_triggered')}")
+    else:
+        print_error(f"反馈提交失败: {data}")
+
     print("\n==========================================")
     print("🎉 End-to-End 测试全部通过！系统稳如老狗。")
     print("==========================================\n")
