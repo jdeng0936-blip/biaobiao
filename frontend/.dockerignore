@@ -1,4 +1,39 @@
-node_modules
-.next
-.env.local
+# ============================================
+# 前端 Docker 构建上下文排除
+# 减少构建上下文体积，加速构建
+# ============================================
+
+# 依赖与构建产物
+node_modules/
+.next/
+out/
+dist/
+
+# 环境与密钥
+.env
+.env.*
+!.env.example
+
+# 日志
 *.log
+npm-debug.log*
+
+# 版本控制
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 文档
+*.md
+LICENSE
+
+# 测试与工具
+coverage/
+.eslintcache
+.turbo/
+tsconfig.tsbuildinfo
