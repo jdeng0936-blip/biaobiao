@@ -47,6 +47,7 @@ jobs:
             test_pipeline.py \
             test_llm_provider.py \
             test_variant.py \
+            test_knowledge_api.py \
             test_project.py \
             test_export_docx.py \
             test_embedding.py \
