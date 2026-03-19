@@ -2,10 +2,13 @@
 用户反馈 API — 数据飞轮入口
 接收前端的 采纳 / 编辑 / 拒绝 反馈，驱动 SFT 数据积累
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import get_db
 from app.services.feedback_service import FeedbackFlywheelService
 
 router = APIRouter(prefix="/api/v1/feedback", tags=["反馈飞轮"])
@@ -28,8 +31,22 @@ class FeedbackResponse(BaseModel):
     flywheel_triggered: bool = Field(False, description="是否触发了飞轮数据下沉")
 
 
+class FeedbackStatsResponse(BaseModel):
+    total: int
+    accept_count: int
+    edit_count: int
+    reject_count: int
+    accept_rate: float
+    edit_rate: float
+    reject_rate: float
+    flywheel_sunk: int
+
+
 @router.post("", response_model=FeedbackResponse)
-async def submit_feedback(req: FeedbackRequest):
+async def submit_feedback(
+    req: FeedbackRequest,
+    db: AsyncSession = Depends(get_db),
+):
     """
     接收用户对 AI 生成内容的反馈
 
@@ -46,7 +63,9 @@ async def submit_feedback(req: FeedbackRequest):
     try:
         service = FeedbackFlywheelService(tenant_id=req.tenant_id)
         flywheel_triggered = await service.ingest_feedback(
+            db=db,
             target_section=req.section_title or req.section_id,
+            section_id=req.section_id,
             original_ai_text=req.original_text,
             user_revised_text=req.revised_text or req.original_text,
             action=req.action,
@@ -66,3 +85,23 @@ async def submit_feedback(req: FeedbackRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"反馈处理失败: {str(e)}")
+
+
+@router.get("/stats", response_model=FeedbackStatsResponse)
+async def get_feedback_stats(
+    tenant_id: str = "default",
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    获取反馈统计数据 — Dashboard 数据飞轮面板
+
+    返回各类反馈的数量、占比和飞轮下沉总量。
+    """
+    try:
+        stats = await FeedbackFlywheelService.get_stats(
+            db=db,
+            tenant_id=tenant_id,
+        )
+        return FeedbackStatsResponse(**stats)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"统计查询失败: {str(e)}")

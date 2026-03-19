@@ -54,6 +54,17 @@ interface ProjectItem {
   updated_at: string;
 }
 
+interface FeedbackStats {
+  total: number;
+  accept_count: number;
+  edit_count: number;
+  reject_count: number;
+  accept_rate: number;
+  edit_rate: number;
+  reject_rate: number;
+  flywheel_sunk: number;
+}
+
 /* ========================================
    Dashboard 页面
    ======================================== */
@@ -61,18 +72,21 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [stats, setStats] = useState({ total: 0, in_progress: 0, completed: 0 });
+  const [feedbackStats, setFeedbackStats] = useState<FeedbackStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   // 从 API 拉取项目列表和统计
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [projRes, statsRes] = await Promise.all([
+        const [projRes, statsRes, fbRes] = await Promise.all([
           fetch(`${API_BASE}/projects`),
           fetch(`${API_BASE}/projects/stats`),
+          fetch(`${API_BASE}/api/v1/feedback/stats`),
         ]);
         if (projRes.ok) setProjects(await projRes.json());
         if (statsRes.ok) setStats(await statsRes.json());
+        if (fbRes.ok) setFeedbackStats(await fbRes.json());
       } catch (e) {
         console.error("拉取项目数据失败:", e);
       } finally {
@@ -152,7 +166,7 @@ export default function DashboardPage() {
             { label: "进行中项目", value: String(stats.in_progress), icon: FolderOpen, trend: null },
             { label: "总项目数", value: String(stats.total), icon: FileText, trend: null },
             { label: "已完成", value: String(stats.completed), icon: TrendingUp, trend: null },
-            { label: "AI 用量", value: "--", icon: Zap, trend: null },
+            { label: "AI 反馈量", value: feedbackStats ? String(feedbackStats.total) : "0", icon: Zap, trend: feedbackStats && feedbackStats.flywheel_sunk > 0 ? `+${feedbackStats.flywheel_sunk} 下沉` : null },
           ].map((stat, i) => (
             <motion.div
               key={i}
@@ -197,6 +211,56 @@ export default function DashboardPage() {
             </a>
           ))}
         </div>
+
+        {/* 数据飞轮面板 */}
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={fadeInUp}
+          className="mb-8 p-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-4 h-4 text-[var(--primary)]" />
+            <h3 className="text-sm font-bold">数据飞轮</h3>
+            <span className="text-[10px] text-[var(--text-tertiary)] ml-1">AI 自我进化引擎</span>
+          </div>
+
+          {feedbackStats && feedbackStats.total > 0 ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* 采纳 */}
+              <div className="p-4 rounded-xl bg-[rgba(34,197,94,0.06)] border border-[rgba(34,197,94,0.12)]">
+                <div className="text-2xl font-bold text-[var(--success)]">{feedbackStats.accept_count}</div>
+                <div className="text-xs text-[var(--text-tertiary)] mt-1">采纳</div>
+                <div className="text-[10px] text-[var(--success)] mt-0.5">{(feedbackStats.accept_rate * 100).toFixed(1)}%</div>
+              </div>
+              {/* 修改 */}
+              <div className="p-4 rounded-xl bg-[rgba(99,102,241,0.06)] border border-[rgba(99,102,241,0.12)]">
+                <div className="text-2xl font-bold text-[var(--primary)]">{feedbackStats.edit_count}</div>
+                <div className="text-xs text-[var(--text-tertiary)] mt-1">修改</div>
+                <div className="text-[10px] text-[var(--primary)] mt-0.5">{(feedbackStats.edit_rate * 100).toFixed(1)}%</div>
+              </div>
+              {/* 拒绝 */}
+              <div className="p-4 rounded-xl bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.12)]">
+                <div className="text-2xl font-bold text-[var(--danger)]">{feedbackStats.reject_count}</div>
+                <div className="text-xs text-[var(--text-tertiary)] mt-1">拒绝</div>
+                <div className="text-[10px] text-[var(--danger)] mt-0.5">{(feedbackStats.reject_rate * 100).toFixed(1)}%</div>
+              </div>
+              {/* 飞轮下沉 */}
+              <div className="p-4 rounded-xl bg-[rgba(245,158,11,0.06)] border border-[rgba(245,158,11,0.12)]">
+                <div className="text-2xl font-bold text-[var(--warning)]">{feedbackStats.flywheel_sunk}</div>
+                <div className="text-xs text-[var(--text-tertiary)] mt-1">知识被飞轮回灌</div>
+                <div className="text-[10px] text-[var(--warning)] mt-0.5">高质量语料已入库</div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Sparkles className="w-8 h-8 mx-auto text-[var(--text-tertiary)] mb-2" />
+              <p className="text-xs text-[var(--text-tertiary)]">
+                当用户对 AI 生成的标书内容做出反馈时，数据飞轮将开始运转
+              </p>
+            </div>
+          )}
+        </motion.div>
 
         {/* 标题行 */}
         <div className="flex items-center justify-between mb-6">

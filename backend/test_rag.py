@@ -135,43 +135,55 @@ class TestKnowledgeService(unittest.TestCase):
 class TestFeedbackService(unittest.IsolatedAsyncioTestCase):
     """FeedbackFlywheelService Mock 测试"""
 
+    def _mock_db(self):
+        """构造 Mock AsyncSession"""
+        from unittest.mock import MagicMock
+        db = MagicMock()
+        db.add = MagicMock()
+        return db
+
     async def test_diff_calculation(self):
         """差异度计算测试"""
         from app.services.feedback_service import FeedbackFlywheelService
 
-        svc = FeedbackFlywheelService(tenant_id="test")
-
         # 完全相同
-        self.assertEqual(svc._calculate_diff_ratio("hello", "hello"), 0.0)
+        self.assertEqual(FeedbackFlywheelService._calculate_diff_ratio("hello", "hello"), 0.0)
 
         # 完全不同
-        ratio = svc._calculate_diff_ratio("apple banana cherry", "x y z w")
+        ratio = FeedbackFlywheelService._calculate_diff_ratio("apple banana cherry", "x y z w")
         self.assertGreater(ratio, 0.5)
 
         # 空文本
-        self.assertEqual(svc._calculate_diff_ratio("", "something"), 1.0)
+        self.assertEqual(FeedbackFlywheelService._calculate_diff_ratio("", "something"), 1.0)
 
     async def test_accept_no_flywheel(self):
         """采纳动作不触发飞轮"""
         from app.services.feedback_service import FeedbackFlywheelService
 
         svc = FeedbackFlywheelService(tenant_id="test")
+        mock_db = self._mock_db()
         result = await svc.ingest_feedback(
+            db=mock_db,
             target_section="3.1 工程概况",
+            section_id="3-1",
             original_ai_text="原始文本",
             user_revised_text="原始文本",
             action="accept",
         )
 
         self.assertFalse(result)
+        mock_db.add.assert_called_once()
 
     async def test_edit_below_threshold_no_flywheel(self):
         """编辑幅度不足不触发飞轮"""
         from app.services.feedback_service import FeedbackFlywheelService
 
         svc = FeedbackFlywheelService(tenant_id="test")
+        mock_db = self._mock_db()
         result = await svc.ingest_feedback(
+            db=mock_db,
             target_section="3.1 工程概况",
+            section_id="3-1",
             original_ai_text="这是一段很长很长的标书原始文本，大约需要超过五十个字才有意义",
             user_revised_text="这是一段很长很长的标书修改文本，大约需要超过五十个字才有意义",
             action="edit",

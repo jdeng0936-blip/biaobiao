@@ -13,7 +13,7 @@ from app.core.database import Base
 from app.core.config import get_settings
 
 # 导入所有 Model（让 Base.metadata 感知表结构）
-from app.models import Project, User, DesensitizeEntry, StructuredTable
+from app.models import Project, User, DesensitizeEntry, StructuredTable, FeedbackLog
 
 config = context.config
 

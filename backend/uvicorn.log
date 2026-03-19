@@ -48,3 +48,48 @@ INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
 22:06:28 [INFO]   ✅ 入库完成: 新增 1, 跳过(重复) 0
 Consider using the pymupdf_layout package for a greatly improved page layout analysis.
 INFO:     127.0.0.1:58053 - "POST /api/v1/upload/document HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63998 - "GET /health HTTP/1.1" 200 OK
+2026-03-19 10:14:30,816 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+10:14:30 [INFO] BEGIN (implicit)
+2026-03-19 10:14:30,837 INFO sqlalchemy.engine.Engine INSERT INTO projects (id, name, project_type, status, description, bid_deadline, progress, tenant_id, created_at, updated_at, created_by) VALUES ($1::UUID, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::TIMESTAMP WITH TIME ZONE, $7::INTEGER, $8::VARCHAR, $9::TIMESTAMP WITH TIME ZONE, $10::TIMESTAMP WITH TIME ZONE, $11::VARCHAR)
+10:14:30 [INFO] INSERT INTO projects (id, name, project_type, status, description, bid_deadline, progress, tenant_id, created_at, updated_at, created_by) VALUES ($1::UUID, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::TIMESTAMP WITH TIME ZONE, $7::INTEGER, $8::VARCHAR, $9::TIMESTAMP WITH TIME ZONE, $10::TIMESTAMP WITH TIME ZONE, $11::VARCHAR)
+2026-03-19 10:14:30,838 INFO sqlalchemy.engine.Engine [generated in 0.00223s] (UUID('a626012f-5b76-459f-a33e-0fec873b5701'), 'E2E 自动化测试项目 - 70f073', 'municipal_road', 'draft', None, None, 0, 'demo_tenant', datetime.datetime(2026, 3, 19, 2, 14, 30, 837151, tzinfo=datetime.timezone.utc), datetime.datetime(2026, 3, 19, 2, 14, 30, 837155, tzinfo=datetime.timezone.utc), None)
+10:14:30 [INFO] [generated in 0.00223s] (UUID('a626012f-5b76-459f-a33e-0fec873b5701'), 'E2E 自动化测试项目 - 70f073', 'municipal_road', 'draft', None, None, 0, 'demo_tenant', datetime.datetime(2026, 3, 19, 2, 14, 30, 837151, tzinfo=datetime.timezone.utc), datetime.datetime(2026, 3, 19, 2, 14, 30, 837155, tzinfo=datetime.timezone.utc), None)
+2026-03-19 10:14:30,889 INFO sqlalchemy.engine.Engine COMMIT
+10:14:30 [INFO] COMMIT
+2026-03-19 10:14:30,894 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+10:14:30 [INFO] BEGIN (implicit)
+2026-03-19 10:14:30,900 INFO sqlalchemy.engine.Engine SELECT projects.id, projects.name, projects.project_type, projects.status, projects.description, projects.bid_deadline, projects.generated_sections, projects.progress, projects.tenant_id, projects.created_at, projects.updated_at, projects.created_by 
+FROM projects 
+WHERE projects.id = $1::UUID
+10:14:30 [INFO] SELECT projects.id, projects.name, projects.project_type, projects.status, projects.description, projects.bid_deadline, projects.generated_sections, projects.progress, projects.tenant_id, projects.created_at, projects.updated_at, projects.created_by 
+FROM projects 
+WHERE projects.id = $1::UUID
+2026-03-19 10:14:30,900 INFO sqlalchemy.engine.Engine [generated in 0.00010s] (UUID('a626012f-5b76-459f-a33e-0fec873b5701'),)
+10:14:30 [INFO] [generated in 0.00010s] (UUID('a626012f-5b76-459f-a33e-0fec873b5701'),)
+INFO:     127.0.0.1:64000 - "POST /projects HTTP/1.1" 200 OK
+2026-03-19 10:14:30,914 INFO sqlalchemy.engine.Engine COMMIT
+10:14:30 [INFO] COMMIT
+2026-03-19 10:14:30,919 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+10:14:30 [INFO] BEGIN (implicit)
+2026-03-19 10:14:30,921 INFO sqlalchemy.engine.Engine SELECT projects.id, projects.name, projects.project_type, projects.status, projects.description, projects.bid_deadline, projects.generated_sections, projects.progress, projects.tenant_id, projects.created_at, projects.updated_at, projects.created_by 
+FROM projects 
+WHERE projects.tenant_id = $1::VARCHAR ORDER BY projects.updated_at DESC
+10:14:30 [INFO] SELECT projects.id, projects.name, projects.project_type, projects.status, projects.description, projects.bid_deadline, projects.generated_sections, projects.progress, projects.tenant_id, projects.created_at, projects.updated_at, projects.created_by 
+FROM projects 
+WHERE projects.tenant_id = $1::VARCHAR ORDER BY projects.updated_at DESC
+2026-03-19 10:14:30,921 INFO sqlalchemy.engine.Engine [generated in 0.00013s] ('demo_tenant',)
+10:14:30 [INFO] [generated in 0.00013s] ('demo_tenant',)
+INFO:     127.0.0.1:64002 - "GET /projects HTTP/1.1" 200 OK
+2026-03-19 10:14:30,927 INFO sqlalchemy.engine.Engine COMMIT
+10:14:30 [INFO] COMMIT
+INFO:     127.0.0.1:64004 - "GET /craft/tree HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64006 - "GET /variants/dimensions HTTP/1.1" 200 OK
+10:14:31 [INFO] 📊 基线统计完成: 1 片段, 5 句
+INFO:     127.0.0.1:64008 - "POST /api/v1/anti-review/check HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64011 - "POST /api/v1/feedback HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64030 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [23469]

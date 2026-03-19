@@ -3,6 +3,7 @@ from app.models.user import User
 from app.models.project import Project
 from app.models.desensitize import DesensitizeEntry
 from app.models.structured_table import StructuredTable
+from app.models.feedback_log import FeedbackLog
 
-__all__ = ["User", "Project", "DesensitizeEntry", "StructuredTable"]
+__all__ = ["User", "Project", "DesensitizeEntry", "StructuredTable", "FeedbackLog"]
 

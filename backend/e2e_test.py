@@ -127,9 +127,22 @@ def main():
     else:
         print_error(f"反馈提交失败: {data}")
 
+    # 9. 反馈统计接口
+    print_step("9. 获取反馈飞轮统计 (GET /api/v1/feedback/stats)")
+    status, data = do_request("GET", "/api/v1/feedback/stats?tenant_id=e2e_test")
+    if status == 200 and "total" in data:
+        print_success(
+            f"飞轮统计正常 | 总计: {data['total']} | "
+            f"采纳: {data['accept_count']} | 修改: {data['edit_count']} | "
+            f"拒绝: {data['reject_count']} | 飞轮下沉: {data['flywheel_sunk']}"
+        )
+    else:
+        print_error(f"飞轮统计失败: {data}")
+
     print("\n==========================================")
     print("🎉 End-to-End 测试全部通过！系统稳如老狗。")
     print("==========================================\n")
 
 if __name__ == "__main__":
     main()
+

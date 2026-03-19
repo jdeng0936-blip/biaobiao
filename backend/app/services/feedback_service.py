@@ -7,8 +7,14 @@
 """
 import logging
 import asyncio
-from datetime import datetime
+import difflib
+from datetime import datetime, timezone
 from typing import Optional
+
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.feedback_log import FeedbackLog
 
 logger = logging.getLogger("feedback_service")
 
@@ -26,7 +32,9 @@ class FeedbackFlywheelService:
 
     async def ingest_feedback(
         self,
+        db: AsyncSession,
         target_section: str,
+        section_id: str,
         original_ai_text: str,
         user_revised_text: str,
         action: str = "edit",
@@ -35,7 +43,9 @@ class FeedbackFlywheelService:
         """
         核心记录槽 — 返回是否触发了飞轮数据下沉
 
+        :param db: 异步数据库 session（从 FastAPI 依赖注入传入）
         :param target_section: 修改的章节标题
+        :param section_id: 章节 ID
         :param original_ai_text: 大模型初稿
         :param user_revised_text: 招投标专家手动修改的高质量终稿
         :param action: accept / edit / reject
@@ -48,6 +58,7 @@ class FeedbackFlywheelService:
         )
 
         flywheel_triggered = False
+        diff_ratio = None
 
         if action == "edit" and len(user_revised_text) > self.MIN_TEXT_LENGTH:
             diff_ratio = self._calculate_diff_ratio(original_ai_text, user_revised_text)
@@ -75,37 +86,40 @@ class FeedbackFlywheelService:
         elif action == "reject":
             logger.info("[数据飞轮] 负向反馈 — 记录供后续 DPO 对齐使用")
 
+        # ========== 持久化到 feedback_logs 表 ==========
+        feedback_log = FeedbackLog(
+            section_id=section_id,
+            section_title=target_section,
+            action=action,
+            original_text=original_ai_text,
+            revised_text=user_revised_text if action == "edit" else None,
+            diff_ratio=diff_ratio,
+            flywheel_triggered=flywheel_triggered,
+            trace_id=trace_id,
+            tenant_id=self.tenant_id,
+        )
+        db.add(feedback_log)
+        # 注意：commit 由 get_db() 上下文管理器统一处理
+
         return flywheel_triggered
 
     @staticmethod
     def _calculate_diff_ratio(text_a: str, text_b: str) -> float:
         """
-        计算两段文本的差异度
+        计算两段文本的差异度 — 使用 difflib.SequenceMatcher
 
-        使用字符级差异比率：编辑距离的近似计算（O(1) 复杂度）。
-        生产环境可替换为 Levenshtein Distance 或 difflib.SequenceMatcher。
+        返回值范围 [0.0, 1.0]，0 表示完全相同，1 表示完全不同。
         """
         if text_a == text_b:
             return 0.0
         if not text_a:
             return 1.0
 
-        len_a = len(text_a)
-        len_b = len(text_b)
-
-        # 基于长度变化 + 内容交集的混合度量
-        length_diff = abs(len_a - len_b) / max(len_a, 1)
-
-        # 基于字符集合交集的 Jaccard 近似
-        set_a = set(text_a.split())
-        set_b = set(text_b.split())
-        if not set_a and not set_b:
-            return length_diff
-
-        jaccard = 1.0 - len(set_a & set_b) / max(len(set_a | set_b), 1)
-
-        # 混合权重：70% Jaccard + 30% 长度差异
-        return 0.7 * jaccard + 0.3 * length_diff
+        # 使用 SequenceMatcher 的 ratio() 方法计算相似度
+        # ratio() 返回 [0, 1] 的相似度，我们取 1 - ratio 得到差异度
+        sm = difflib.SequenceMatcher(None, text_a, text_b)
+        similarity = sm.ratio()
+        return round(1.0 - similarity, 4)
 
     async def _async_sink_to_knowledge_base(
         self,
@@ -130,7 +144,7 @@ class FeedbackFlywheelService:
                     "diff_ratio": round(diff_ratio, 4),
                     "original_length": len(original_text),
                     "revised_length": len(golden_text),
-                    "revised_at": datetime.utcnow().isoformat(),
+                    "revised_at": datetime.now(timezone.utc).isoformat(),
                 },
             )
 
@@ -141,3 +155,66 @@ class FeedbackFlywheelService:
 
         except Exception as e:
             logger.error(f"[数据飞轮] 下沉失败: {e}", exc_info=True)
+
+    # ============================================================
+    # 统计查询（供 Dashboard 飞轮面板使用）
+    # ============================================================
+
+    @staticmethod
+    async def get_stats(db: AsyncSession, tenant_id: str = "default") -> dict:
+        """
+        获取反馈统计数据 — 供 Dashboard 数据飞轮面板渲染
+
+        返回格式：
+        {
+            "total": 42,
+            "accept_count": 20,
+            "edit_count": 15,
+            "reject_count": 7,
+            "accept_rate": 0.476,
+            "edit_rate": 0.357,
+            "reject_rate": 0.167,
+            "flywheel_sunk": 8
+        }
+        """
+        # 按 action 分组统计
+        stmt = (
+            select(
+                FeedbackLog.action,
+                func.count().label("cnt"),
+            )
+            .where(FeedbackLog.tenant_id == tenant_id)
+            .group_by(FeedbackLog.action)
+        )
+        result = await db.execute(stmt)
+        rows = result.all()
+
+        counts = {"accept": 0, "edit": 0, "reject": 0}
+        for action, cnt in rows:
+            if action in counts:
+                counts[action] = cnt
+
+        total = sum(counts.values())
+
+        # 飞轮下沉数量
+        flywheel_stmt = (
+            select(func.count())
+            .select_from(FeedbackLog)
+            .where(
+                FeedbackLog.tenant_id == tenant_id,
+                FeedbackLog.flywheel_triggered.is_(True),
+            )
+        )
+        flywheel_result = await db.execute(flywheel_stmt)
+        flywheel_sunk = flywheel_result.scalar() or 0
+
+        return {
+            "total": total,
+            "accept_count": counts["accept"],
+            "edit_count": counts["edit"],
+            "reject_count": counts["reject"],
+            "accept_rate": round(counts["accept"] / total, 3) if total else 0,
+            "edit_rate": round(counts["edit"] / total, 3) if total else 0,
+            "reject_rate": round(counts["reject"] / total, 3) if total else 0,
+            "flywheel_sunk": flywheel_sunk,
+        }
