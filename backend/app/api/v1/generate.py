@@ -13,6 +13,9 @@ from app.services.generate_service import BidGenerateService
 
 router = APIRouter(prefix="/api/v1/generate", tags=["内容生成"])
 
+# 临时 tenant_id（正式环境从 JWT 中提取）
+DEMO_TENANT = "demo_tenant"
+
 # 服务单例
 _generate_service: BidGenerateService | None = None
 _knowledge_service: KnowledgeService | None = None
@@ -22,9 +25,9 @@ _embedding_service: GeminiEmbedding | None = None
 def get_services():
     global _generate_service, _knowledge_service, _embedding_service
     if _generate_service is None:
-        _generate_service = BidGenerateService()
+        _generate_service = BidGenerateService(tenant_id=DEMO_TENANT)
     if _knowledge_service is None:
-        _knowledge_service = KnowledgeService()
+        _knowledge_service = KnowledgeService(tenant_id=DEMO_TENANT)
     if _embedding_service is None:
         _embedding_service = GeminiEmbedding()
     return _generate_service, _knowledge_service, _embedding_service

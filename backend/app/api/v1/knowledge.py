@@ -11,6 +11,9 @@ from app.services.embedding_service import GeminiEmbedding
 
 router = APIRouter(prefix="/api/v1/knowledge", tags=["知识库"])
 
+# 临时 tenant_id（正式环境从 JWT 中提取）
+DEMO_TENANT = "demo_tenant"
+
 # 服务单例（FastAPI 生命周期内复用）
 _knowledge_service: KnowledgeService | None = None
 _embedding_service: GeminiEmbedding | None = None
@@ -19,7 +22,7 @@ _embedding_service: GeminiEmbedding | None = None
 def get_knowledge_service() -> KnowledgeService:
     global _knowledge_service
     if _knowledge_service is None:
-        _knowledge_service = KnowledgeService()
+        _knowledge_service = KnowledgeService(tenant_id=DEMO_TENANT)
     return _knowledge_service
 
 

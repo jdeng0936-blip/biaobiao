@@ -17,12 +17,13 @@ logger = logging.getLogger("knowledge_service")
 class KnowledgeService:
     """知识库三层检索核心服务"""
 
-    def __init__(self, db_url: str = None):
+    def __init__(self, db_url: str = None, tenant_id: str = "default"):
         raw_url = db_url or os.getenv(
             "DATABASE_URL",
             "postgresql://mac111@localhost:5432/biaobiao"
         )
         self.db_url = raw_url.replace("+asyncpg", "")
+        self.tenant_id = tenant_id
         self._conn = None
 
     @property
