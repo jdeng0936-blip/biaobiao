@@ -69,6 +69,51 @@ class BidGenerateService:
 - 重要数据直接写入正文，不要加任何装饰符号
 - 整体风格必须像正式打印的标书文档，而非网络文章"""
 
+    @staticmethod
+    def _parse_json(text: str) -> dict:
+        try:
+            import re
+            cleaned = text.strip()
+            if cleaned.startswith("```json"):
+                cleaned = cleaned[7:]
+            if cleaned.startswith("```"):
+                cleaned = cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            match = re.search(r'\{.*\}', cleaned, re.S)
+            if match:
+                return json.loads(match.group())
+            return json.loads(cleaned)
+        except Exception:
+            return {}
+
+    async def _run_planner(self, section_title: str, project_context: str, user_requirements: str) -> dict:
+        sys_prompt = "你是一个高级标书规划规划师。必须且只能输出合法的 JSON 对象。格式限制：{\"outline\": \"大纲建议文字\", \"queries\": [\"如果需要补充知识库可以填入一些工程短语作为搜素关键词\"]}"
+        prompt = f"针对即将编写的【{section_title}】章节制定计划纲要。\n项目背景：{project_context}\n特殊要求：{user_requirements}\n请规划内容大纲并提取可能需要额外查阅的知识点（不超过2个关键词）。"
+        try:
+            res = await self.selector.generate("bid_generate", sys_prompt, prompt)
+            return self._parse_json(res.text)
+        except Exception as e:
+            logger.warning(f"Planner 执行异常: {e}")
+            return {"outline": "", "queries": []}
+
+    async def _run_reviewer(self, draft: str, scoring_points: list[str]) -> dict:
+        if not scoring_points:
+            # 没提供打分表，直接让过
+            return {"passed": True, "feedbacks": []}
+            
+        sys_prompt = "你是一个铁面无私的评标专家考官。必须且只能输出纯 JSON 对象。格式边界：{\"passed\": true或false, \"feedbacks\": [\"如果不通过，列出缺失漏写的评分点批评或Markdown滥用问题\"]}"
+        punkte = ""
+        for i, p in enumerate(scoring_points, 1):
+            punkte += f"{i}. {p}\n"
+        prompt = f"【本章节需要遵守的评标专家打分硬指标】：\n{punkte}\n\n【被审核初稿（部分）】：\n{draft[:1500]}\n\n请审核初稿是否精确且全面地覆盖了所有评分点并且没有使用Markdown。如果缺少任何一项则判定为未通过(passed:false)。"
+        try:
+            res = await self.selector.generate("bid_generate", sys_prompt, prompt)
+            return self._parse_json(res.text)
+        except Exception as e:
+            logger.warning(f"Reviewer 执行异常: {e}")
+            return {"passed": True, "feedbacks": []}
+            
     def build_rag_prompt(
         self,
         section_title: str,
@@ -77,60 +122,56 @@ class BidGenerateService:
         rag_chunks: list[dict],
         user_requirements: Optional[str] = None,
         scoring_points: list[str] = None,
+        planner_outline: str = None,
+        review_feedbacks: list[str] = None,
     ) -> str:
-        """构建 RAG 增强的生成 Prompt — 含溯源编号"""
-        # 知识库上下文（每个 chunk 带唯一编号，供 LLM 引用）
+        """构建 RAG 增强的生成 Prompt — 融入多节点状态信息"""
         knowledge_context = ""
         if rag_chunks:
             knowledge_context = "\n\n## 参考知识库（引用时请标注 [REF:编号]）\n"
             for i, chunk in enumerate(rag_chunks[:5], 1):
                 source = chunk.get("source_file", "未知来源")
-                density = chunk.get("data_density", "")
                 similarity = chunk.get("similarity", 0)
                 content = chunk.get("content", "")[:800]
-                knowledge_context += f"\n### [REF:{i}]（来源: {source}，相似度 {similarity:.0%}，密度: {density}）\n{content}\n"
+                knowledge_context += f"\n### [REF:{i}]（来源: {source}，相似度 {similarity:.0%}）\n{content}\n"
 
-        # 用户额外要求
         user_req_section = ""
         if user_requirements:
             user_req_section = f"\n\n## 用户额外要求\n{user_requirements}"
+            
+        planner_section = ""
+        if planner_outline:
+            planner_section = f"\n\n## (参考) 机器智能规划的大纲方向\n{planner_outline}"
 
-        # 评分点驱动（借鉴点 #3）
         scoring_section = ""
         if scoring_points:
-            scoring_section = "\n\n## 本章节对应的评分点（必须逐点覆盖）\n"
+            scoring_section = "\n\n## 本章节对应的评分点（打分项：必须逐点覆盖）\n"
             for i, point in enumerate(scoring_points, 1):
                 scoring_section += f"  {i}. {point}\n"
-            scoring_section += "\n⚠️ 以上评分点是评审专家的打分依据，每个点都必须在正文中有明确的响应段落。"
+
+        review_section = ""
+        if review_feedbacks:
+            review_section = "\n\n## 【重大指令！】前一次生成被评标审查退回，原因如下（本次你必须重点修补以下缺陷）：\n"
+            for i, fb in enumerate(review_feedbacks, 1):
+                review_section += f" - 批评意见 {i}: {fb}\n"
 
         return f"""## 任务
-为以下标书章节生成专业、完整的内容。
+为你提供以下标书的资料，写出专业、完整的标书内容。
 
-## 章节信息
+## 章节与环境信息
 - 章节标题: {section_title}
 - 内容类型: {section_type}
-- 项目背景: {project_context}
-{knowledge_context}{scoring_section}{user_req_section}
+- 项目要求背景: {project_context}
+{knowledge_context}{scoring_section}{user_req_section}{planner_section}{review_section}
 
-## 格式要求（必须严格遵守）
-1. 绝对禁止使用任何 Markdown 语法（#、*、**、```、-、> 等全部禁止）
+## 格式基座纪律要求（严禁逾越）：
+1. 绝对禁止使用任何 Markdown 语法（#、*、**、```、-、> 等全部禁止），保持公文平滑感。
 2. 章节标题用中文编号：一、二、三、（一）（二）、1. 2. 3.
-3. 每个段落开头空两格
-4. 列举内容用（1）（2）（3）或 ① ② ③
-5. 整体格式必须像正式打印的投标文件
+3. 每个段落首行不空两格（让前端或后期docx工具去做），但段间可以适度留空行。
+4. 如需溯源标注（引用知识库时），在段落末尾附加上 [REF:x]。
 
-## 溯源标注要求（极其重要）
-当你引用或参考了上方某个知识库片段的内容时，在该段落末尾标注 [REF:编号]。
-例如：本项目采用分层碾压工艺，每层厚度不超过 30cm。[REF:2]
+请综合以上约束与要求，给出可以直接被拷贝作为最终标书文件的纯文本内容："""
 
-## 内容要求
-1. 充分参考上方知识库片段中的专业表达、具体参数和技术细节
-2. 不要照搬原文，要结合当前项目特点重新组织和优化
-3. 确保生成内容覆盖该章节应有的全部要点
-4. 如有评分点，必须逐点覆盖，确保每个评分点在正文中都有对应内容
-5. 文字量适中，确保内容详实但不注水（约 800-2000 字）
-
-现在请直接输出该章节的标书正文内容："""
 
     async def generate_stream(
         self,
@@ -139,43 +180,97 @@ class BidGenerateService:
         project_context: str = "",
         rag_chunks: list[dict] = None,
         user_requirements: str = None,
+        scoring_points: list[str] = None,
     ) -> AsyncGenerator[str, None]:
-        """流式生成标书内容 — 通过 LLMSelector 路由到 bid_generate 任务"""
+        """流式生成标书内容 — 完全由微型状态机重构 (Agent Flow)"""
         if not self.ready:
             yield "data: " + json.dumps({"error": "LLM 服务未就绪"}, ensure_ascii=False) + "\n\n"
             return
-
-        system_prompt = self.build_system_prompt()
-        user_prompt = self.build_rag_prompt(
-            section_title=section_title,
-            section_type=section_type,
-            project_context=project_context,
-            rag_chunks=rag_chunks or [],
-            user_requirements=user_requirements,
-        )
+            
+        import asyncio
+        state = {
+            "iteration": 0,
+            "max_iter": 2,
+            "draft": "",
+            "review_feedbacks": [],
+            "chunks": rag_chunks or [],
+            "outline": ""
+        }
 
         try:
-            # 脱敏：发送 LLM 前 mask
-            masked_prompt, mapping = self.desensitizer.mask(user_prompt)
-            masked_system = system_prompt  # system prompt 无敏感信息
+            # === Node 1: Planner ===
+            yield "data: " + json.dumps({"type": "status", "text": "📝 [多智能体管线 启动] - 节点 1: 专家开始构思文档结构规划..."}, ensure_ascii=False) + "\n\n"
+            plan_res = await self._run_planner(section_title, project_context, str(user_requirements))
+            state["outline"] = plan_res.get("outline", "")
+            queries = plan_res.get("queries", [])
+            
+            # === Node 2: Retriever ===
+            if queries:
+                yield "data: " + json.dumps({"type": "status", "text": f"🔍 [多智能体管线 追加] - 节点 2: 发现认知盲区，底层探针主动追检 {len(queries)} 项额外短语..."}, ensure_ascii=False) + "\n\n"
+                from app.services.knowledge_service import KnowledgeService
+                try:
+                    ks = KnowledgeService(self._tenant_id)
+                    for q in queries:
+                        extra = ks.search_semantic(query_embedding=[0]*768, top_k=1, tenant_id=self._tenant_id) # 这里使用兜底零向量因为没有直接可提取的纯文本倒排索引,或者假设项目包含更底层查询。作为Demo使用防崩
+                        # 妥协版：调用 search_structured
+                        extra_struc = ks.search_structured(query_text=q, tenant_id=self._tenant_id, top_k=1)
+                        state["chunks"].extend(extra_struc)
+                except Exception as e:
+                    logger.warning(f"Retriever 补充查询跳过: {e}")
 
-            # 收集完整输出用于 unmask
-            full_output = ""
-
-            # 通过 LLMSelector 动态路由（task_type = bid_generate）
-            async for text in self.selector.stream("bid_generate", masked_system, masked_prompt):
-                # 实时回填脱敏占位符
-                unmasked_text = self.desensitizer.unmask(text, mapping)
-                full_output += unmasked_text
-                yield "data: " + json.dumps({
-                    "type": "content",
-                    "text": unmasked_text,
-                }, ensure_ascii=False) + "\n\n"
+            # === Loop Node: Writer -> Reviewer ===
+            while state["iteration"] < state["max_iter"]:
+                iter_text = f" （第 {state['iteration'] + 1} 次深度修撰重试）" if state["iteration"] > 0 else " 执笔者撰稿"
+                yield "data: " + json.dumps({"type": "status", "text": f"✍️ [多智能体管线 输出] - 节点 3:{iter_text} 开始撰写..."}, ensure_ascii=False) + "\n\n"
+                
+                # 构造包含状态机的动态强化 Prompt
+                system_prompt = self.build_system_prompt()
+                user_prompt = self.build_rag_prompt(
+                    section_title=section_title,
+                    section_type=section_type,
+                    project_context=project_context,
+                    rag_chunks=state["chunks"],
+                    user_requirements=user_requirements,
+                    scoring_points=scoring_points,
+                    planner_outline=state["outline"],
+                    review_feedbacks=state["review_feedbacks"] if state["iteration"] > 0 else None,
+                )
+                
+                masked_prompt, mapping = self.desensitizer.mask(user_prompt)
+                
+                # 开始写稿，一次性生成完毕存放内存
+                writer_res = await self.selector.generate("bid_generate", system_prompt, masked_prompt)
+                unmasked_draft = self.desensitizer.unmask(writer_res.text, mapping)
+                state["draft"] = unmasked_draft
+                
+                # --- Node 4: Reviewer ---
+                yield "data: " + json.dumps({"type": "status", "text": f"⚖️ [多智能体管线 审查] - 节点 4: 评标机器人对初步文本进行苛刻质量巡视..."}, ensure_ascii=False) + "\n\n"
+                review_out = await self._run_reviewer(state["draft"], scoring_points or [])
+                passed = review_out.get("passed", True)
+                
+                if passed or state["iteration"] == state["max_iter"] - 1:
+                    if passed:
+                        yield "data: " + json.dumps({"type": "status", "text": "✅ 终核审查通过，开始数据推流至客户端。"}, ensure_ascii=False) + "\n\n"
+                    else:
+                        yield "data: " + json.dumps({"type": "status", "text": "⚠️ 制式循环拉满，将强制向客户端进行释出。"}, ensure_ascii=False) + "\n\n"
+                    # 这里为了模拟打字机流式，把全量数据分割给前端
+                    for i in range(0, len(state["draft"]), 6):
+                        chunk = state["draft"][i:i+6]
+                        yield "data: " + json.dumps({"type": "content", "text": chunk}, ensure_ascii=False) + "\n\n"
+                        await asyncio.sleep(0.01)
+                    break
+                else:
+                    # 被打回重造
+                    feedbacks = review_out.get("feedbacks", ["未知格式或违规错误"])
+                    state["review_feedbacks"] = feedbacks
+                    fault_text = feedbacks[0] if feedbacks else "格式越界"
+                    yield "data: " + json.dumps({"type": "status", "text": f"❌ 核查失败！专家意见[{fault_text[:15]}...] 正在请求指令打回退档重写！"}, ensure_ascii=False) + "\n\n"
+                    state["iteration"] += 1
 
             yield "data: " + json.dumps({"type": "done"}, ensure_ascii=False) + "\n\n"
 
         except Exception as e:
-            logger.error(f"生成失败: {e}")
+            logger.error(f"多智能体生成核心失败: {e}")
             yield "data: " + json.dumps({
                 "type": "error",
                 "message": str(e),

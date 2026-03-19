@@ -27,6 +27,7 @@ from app.api.v1.upload import router as upload_router
 from app.api.v1.project import router as project_router
 from app.api.v1.craft import router as craft_router
 from app.api.v1.variant import router as variant_router
+from app.api.v1.feedback import router as feedback_router
 
 app = FastAPI(
     title="标标 AI API",
@@ -54,6 +55,7 @@ app.include_router(upload_router)
 app.include_router(project_router)
 app.include_router(craft_router)
 app.include_router(variant_router)
+app.include_router(feedback_router)
 
 
 # 导入所有 ORM Model（确保 Base.metadata 包含所有表）

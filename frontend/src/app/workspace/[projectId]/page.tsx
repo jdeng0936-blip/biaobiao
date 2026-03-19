@@ -599,6 +599,11 @@ function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: str
   // 选中浮动工具栏相关状态
   const [floatingToolbar, setFloatingToolbar] = useState<{ x: number; y: number; text: string; sectionTitle: string } | null>(null);
 
+  // === 反馈闭环状态 ===
+  const [feedbackState, setFeedbackState] = useState<Record<string, 'accept' | 'edit' | 'reject' | 'submitting' | null>>({});
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8001";
 
   // 默认章节（Step3 未生成时的 fallback）
@@ -614,6 +619,40 @@ function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: str
   const sections = store.outlineSections.length > 0
     ? store.outlineSections.map(s => ({ id: s.id, title: s.title, type: s.type }))
     : DEFAULT_SECTIONS;
+
+  // 提交反馈到数据飞轮 API
+  const submitFeedback = useCallback(async (
+    sectionId: string,
+    sectionTitle: string,
+    action: 'accept' | 'edit' | 'reject',
+    originalText: string,
+    revisedText?: string,
+  ) => {
+    setFeedbackState(prev => ({ ...prev, [sectionId]: 'submitting' }));
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section_id: sectionId,
+          section_title: sectionTitle,
+          action,
+          original_text: originalText,
+          revised_text: revisedText || originalText,
+        }),
+      });
+      if (res.ok) {
+        setFeedbackState(prev => ({ ...prev, [sectionId]: action }));
+        if (action === 'edit' && revisedText) {
+          setGeneratedContent(prev => ({ ...prev, [sectionId]: revisedText }));
+          store.setGeneratedContent(sectionId, revisedText);
+        }
+      }
+    } catch (e) {
+      console.error('反馈提交失败:', e);
+    }
+    setEditingSection(null);
+  }, [sections]);
 
   // 检测文字选中 → 弹出浮动工具栏
   const handleTextSelect = useCallback((sectionTitle: string) => {
@@ -905,17 +944,89 @@ function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: str
 
               {/* 标书正文格式渲染 + 选中交互 */}
               {(content || isGenerating) && (
+                <>
                 <div ref={isGenerating ? contentRef : undefined}
                   className="px-6 py-5 border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] max-h-[500px] overflow-y-auto"
                   onMouseUp={() => handleTextSelect(sec.title)}>
                   {content ? (
-                    <div className="space-y-0">{renderBidContent(content, content)}</div>
+                    editingSection === sec.id ? (
+                      <textarea
+                        value={editDraft}
+                        onChange={(e) => setEditDraft(e.target.value)}
+                        className="w-full min-h-[300px] px-4 py-3 rounded-lg bg-[var(--bg-elevated)] border border-[var(--primary)] text-white text-sm leading-[1.9] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] resize-y"
+                      />
+                    ) : (
+                      <div className="space-y-0">{renderBidContent(content, content)}</div>
+                    )
                   ) : (
                     <span className="text-[var(--text-tertiary)] flex items-center gap-2 text-sm">
                       <Loader2 className="w-4 h-4 animate-spin" /> 正在从知识库检索相关片段并生成内容...
                     </span>
                   )}
                 </div>
+
+                {/* 反馈按钮组 — 数据飞轮入口 */}
+                {content && !isGenerating && (
+                  <div className="px-5 py-3 border-t border-[var(--border-subtle)] bg-[var(--bg-elevated)] flex items-center gap-2">
+                    {feedbackState[sec.id] === 'submitting' ? (
+                      <span className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
+                        <Loader2 className="w-3 h-3 animate-spin" /> 反馈提交中...
+                      </span>
+                    ) : feedbackState[sec.id] === 'accept' ? (
+                      <span className="flex items-center gap-1.5 text-xs text-[var(--success)]">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> 已采纳 — 飞轮数据已记录
+                      </span>
+                    ) : feedbackState[sec.id] === 'edit' ? (
+                      <span className="flex items-center gap-1.5 text-xs text-[var(--primary)]">
+                        <Pencil className="w-3.5 h-3.5" /> 修改已提交 — 高质量语料已回灌知识库
+                      </span>
+                    ) : feedbackState[sec.id] === 'reject' ? (
+                      <span className="flex items-center gap-1.5 text-xs text-[var(--warning)]">
+                        <RefreshCw className="w-3.5 h-3.5" /> 已拒绝 — 正在重新生成...
+                      </span>
+                    ) : editingSection === sec.id ? (
+                      <>
+                        <button
+                          onClick={() => submitFeedback(sec.id, sec.title, 'edit', content, editDraft)}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white text-xs font-medium hover:brightness-110 transition-all"
+                        >
+                          <Check className="w-3 h-3" /> 提交修改
+                        </button>
+                        <button
+                          onClick={() => { setEditingSection(null); setEditDraft(''); }}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--border-default)] text-xs text-[var(--text-secondary)] hover:text-white transition-all"
+                        >
+                          <X className="w-3 h-3" /> 取消
+                        </button>
+                        <span className="ml-auto text-[10px] text-[var(--text-tertiary)]">修改后文本将回灌知识库</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[10px] text-[var(--text-tertiary)] mr-2">AI 生成质量：</span>
+                        <button
+                          onClick={() => submitFeedback(sec.id, sec.title, 'accept', content)}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--border-default)] text-xs text-[var(--success)] hover:bg-[rgba(34,197,94,0.08)] hover:border-[var(--success)] transition-all"
+                        >
+                          <ThumbsUp className="w-3 h-3" /> 采纳
+                        </button>
+                        <button
+                          onClick={() => { setEditingSection(sec.id); setEditDraft(content); }}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--border-default)] text-xs text-[var(--primary)] hover:bg-[var(--primary-glow)] hover:border-[var(--primary)] transition-all"
+                        >
+                          <Pencil className="w-3 h-3" /> 编辑
+                        </button>
+                        <button
+                          onClick={async () => { await submitFeedback(sec.id, sec.title, 'reject', content); handleGenerate(sec.id, sec.title, sec.type); }}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--border-default)] text-xs text-[var(--danger)] hover:bg-[rgba(239,68,68,0.08)] hover:border-[var(--danger)] transition-all"
+                        >
+                          <ThumbsDown className="w-3 h-3" /> 拒绝
+                        </button>
+                        <span className="ml-auto text-[10px] text-[var(--text-tertiary)]">反馈驱动 AI 自进化</span>
+                      </>
+                    )}
+                  </div>
+                )}
+                </>
               )}
             </div>
           );

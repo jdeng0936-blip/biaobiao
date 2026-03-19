@@ -42,10 +42,11 @@ class KnowledgeService:
         project_type: Optional[str] = None,
         doc_section: Optional[str] = None,
         min_density: Optional[str] = None,
+        tenant_id: str = "default",
     ) -> list[dict]:
         """Layer 1 — 向量余弦相似度检索"""
-        conditions = ["embedding IS NOT NULL"]
-        filter_params = []
+        conditions = ["embedding IS NOT NULL", "tenant_id = %s"]
+        filter_params = [tenant_id]
 
         if project_type:
             conditions.append("%s = ANY(project_type)")
@@ -217,6 +218,7 @@ class KnowledgeService:
             project_type=project_type,
             doc_section=doc_section,
             min_density=min_density,
+            tenant_id=tenant_id,
         )
 
         # Layer 2: 结构化查询（仅在有文本查询时启用）
@@ -340,6 +342,66 @@ class KnowledgeService:
                 ORDER BY count(*) DESC
             """)
             return [dict(row) for row in cur.fetchall()]
+
+    def insert_feedback_chunk(
+        self,
+        content: str,
+        section: str,
+        tenant_id: str = "default",
+        source_tag: str = "human_revised",
+        metadata: dict = None,
+    ) -> bool:
+        """
+        Feedback Flywheel 专用 — 将人工修订的高质量语料插入 training_chunks
+
+        所有写入操作强制绑定 tenant_id（多租户防线）。
+        """
+        import json
+        from datetime import datetime
+
+        sql = """
+            INSERT INTO training_chunks (
+                content, source_file, chapter, section,
+                project_type, doc_section, craft_tags,
+                char_count, has_params, data_density,
+                tenant_id, created_at
+            ) VALUES (
+                %s, %s, %s, %s,
+                %s, %s, %s,
+                %s, %s, %s,
+                %s, %s
+            )
+        """
+
+        meta_str = json.dumps(metadata or {}, ensure_ascii=False)
+
+        params = (
+            content,
+            f"feedback://{source_tag}",  # 来源标记为反馈
+            section,                      # chapter
+            section,                      # section
+            "{}",                         # project_type (JSONB)
+            "feedback",                   # doc_section
+            f'{{"source": "{source_tag}", "meta": {meta_str}}}',  # craft_tags (JSONB)
+            len(content),                 # char_count
+            False,                        # has_params
+            "high",                       # data_density — 人工修订一律标记为高密度
+            tenant_id,                    # tenant_id — 多租户铁律
+            datetime.now(tz=datetime.now().astimezone().tzinfo),  # created_at (timezone-aware)
+        )
+
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(sql, params)
+            self.conn.commit()
+            logger.info(
+                f"[知识库] 飞轮语料已入库 | tenant={tenant_id} | section={section[:20]} | len={len(content)}"
+            )
+            return True
+        except Exception as e:
+            self.conn.rollback()
+            logger.error(f"[知识库] 飞轮语料入库失败: {e}")
+            return False
 
     def close(self):
         if self._conn and not self._conn.closed:
