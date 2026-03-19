@@ -40,6 +40,7 @@ class GenerateRequest(BaseModel):
     project_name: str = Field(default="", description="项目名称")
     project_type: str = Field(default="", description="工程类型，如「市政道路」")
     requirements: Optional[str] = Field(default=None, description="用户补充要求")
+    scoring_points: Optional[list[str]] = Field(default=None, description="评分点列表（从招标文件提取）")
     use_rag: bool = Field(default=True, description="是否使用知识库增强")
     rag_top_k: int = Field(default=5, ge=1, le=10, description="RAG 检索条数")
 
@@ -93,6 +94,7 @@ async def generate_section(req: GenerateRequest):
             project_type=req.project_type,
             rag_chunks=rag_chunks,
             user_requirements=req.requirements,
+            scoring_points=req.scoring_points,
         ):
             yield chunk
 

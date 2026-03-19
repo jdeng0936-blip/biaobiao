@@ -404,7 +404,20 @@ function Step3Placeholder() {
         const data = await res.json();
         setScoringResult(data.scoring);
         setOutline(data.outline || []);
-        // 同步到 Zustand store 供 Step4 使用
+        // 同步评分点到 Zustand store 供 Step4 生成时引用
+        if (data.scoring?.points) {
+          store.setScoringData(
+            data.scoring.points.map((p: any, i: number) => ({
+              id: `sp-${i}`,
+              category: p.category || '综合',
+              item: p.item || '',
+              maxScore: p.max_score || 0,
+              description: p.requirements || '',
+            })),
+            data.scoring.total_score || 0,
+          );
+        }
+        // 同步大纲到 Zustand store 供 Step4 使用
         store.setOutline((data.outline || []).map((s: any, i: number) => ({
           id: s.id || `sec-${i}`,
           title: s.title || '',
@@ -725,9 +738,10 @@ function Step4Generate({ onAIAction }: { onAIAction?: (action: string, text: str
           section_title: sectionTitle,
           section_type: sectionType,
           project_name: store.projectName || "标书项目",
-          project_type: store.industry || "市政道路",
+          project_type: store.industry || "municipal_road",
           use_rag: true,
           rag_top_k: 5,
+          scoring_points: store.scoringPoints.map(p => `${p.item}（${p.maxScore}分）`),
         }),
       });
       if (!res.ok) throw new Error("生成失败");
