@@ -89,17 +89,23 @@ docker compose up -d
 ## 测试覆盖
 
 ```
-83 passed in 0.82s — 9 个测试文件覆盖 9 个核心模块
+181 passed in 1.96s — 15 个测试文件覆盖 17 个核心模块
 ```
 
 | 文件 | 用例 | 覆盖 |
 |:---|:---:|:---|
-| test_project | 11 | UUID 安全解析 / Pydantic 模型 / ORM 转换 |
-| test_export_docx | 8 | DOCX 生成 / ZIP 校验 / 内容完整性 |
-| test_embedding | 11 | Gemini Embedding Mock + 行业词库 6 行业校验 |
+| test_pipeline | 27 | 表格推断 / 数值提取 / 章节切片 / NER脱敏 / 自动标签 |
+| test_generate | 19 | Pydantic 模型 / Prompt 构建 / RAG 注入 |
 | test_anti_review | 18 | L1 统计 + L2 N-gram + 综合审查 |
+| test_variant | 15 | 变体配置 / 生成逻辑 / 相似度矩阵 |
+| test_knowledge_api | 15 | 知识库模型 / tenant_id 注入 |
 | test_feedback_service | 13 | 差分计算 + 飞轮入库 + 统计查询 |
+| test_llm_provider | 12 | ModelConfig / GeminiProvider / LLMSelector |
+| test_project | 11 | UUID 安全解析 / Pydantic 模型 / ORM 转换 |
+| test_embedding | 11 | Gemini Embedding Mock + 行业词库 6 行业校验 |
+| test_api_integration | 9 | 健康检查 / 反审标 / 工艺 / 变体 / 导出 / 评分 |
 | test_desensitize | 10 | 脱敏 mask/unmask/roundtrip + 词典 |
+| test_export_docx | 8 | DOCX 生成 / ZIP 校验 / 内容完整性 |
 | test_rag | 7 | 三层检索 + 反馈沉入 |
 | test_llm | 5 | Prompt 构建 + Planner + Reviewer |
 
@@ -128,7 +134,7 @@ EmptyProject/
 │   │   ├── services/           # 业务逻辑层
 │   │   └── data/               # 行业词库 + 种子数据
 │   ├── scripts/                # 工具脚本 (seed)
-│   ├── test_*.py               # 83 个单元测试
+│   ├── test_*.py               # 181 个单元测试（15 文件）
 │   └── Dockerfile
 └── frontend/
     ├── src/

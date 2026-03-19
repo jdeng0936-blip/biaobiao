@@ -57,16 +57,12 @@ class TestHealthEndpoints(unittest.TestCase):
     def setUpClass(cls):
         cls.client = _make_client()
 
-    def test_root_health(self):
-        r = self.client.get("/health")
-        self.assertEqual(r.status_code, 200)
-        data = r.json()
-        self.assertEqual(data["status"], "ok")
-
     def test_api_health(self):
         r = self.client.get("/api/health")
         self.assertEqual(r.status_code, 200)
-        self.assertIn("status", r.json())
+        data = r.json()
+        self.assertEqual(data["status"], "ok")
+        self.assertIn("version", data)
 
 
 # ============================================================

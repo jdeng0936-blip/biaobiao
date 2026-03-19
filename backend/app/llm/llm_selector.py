@@ -22,6 +22,13 @@ _MODEL_PROVIDER_MAP = {
     # "ollama": ["qwen", "glm", "llama"],
 }
 
+# 终极降级静态模板（当所有 LLM 均不可用时返回）
+_STATIC_FALLBACK = (
+    "【系统提示】AI 生成服务暂时不可用，请稍后重试。\n\n"
+    "您可以先手动编写此章节内容，系统恢复后可重新使用 AI 生成功能。\n\n"
+    "建议包含：施工方案概述、工序安排、质量保证措施、安全文明施工要求。"
+)
+
 
 class LLMSelector:
     """
@@ -156,7 +163,9 @@ class LLMSelector:
             except Exception as e:
                 logger.error(f"❌ [{task_type}] fallback 也失败: {e}")
 
-        raise RuntimeError(f"[{task_type}] 所有模型均不可用")
+        # 终极降级：返回静态模板（不崩溃）
+        logger.critical(f"\ud83d\udeab [{task_type}] 所有模型均不可用，返回静态模板")
+        return LLMResponse(text=_STATIC_FALLBACK, model="static_fallback")
 
     async def stream(
         self,
@@ -189,7 +198,9 @@ class LLMSelector:
             except Exception as e:
                 logger.error(f"❌ [{task_type}] fallback stream 也失败: {e}")
 
-        raise RuntimeError(f"[{task_type}] 所有模型均不可用")
+        # 终极降级：逐字 yield 静态模板（前端不白屏）
+        logger.critical(f"\ud83d\udeab [{task_type}] 所有模型流式均不可用，返回静态模板")
+        yield _STATIC_FALLBACK
 
     async def embed(
         self,

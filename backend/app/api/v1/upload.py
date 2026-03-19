@@ -13,6 +13,9 @@ logger = logging.getLogger("upload_api")
 
 router = APIRouter(prefix="/api/v1/upload", tags=["文件上传"])
 
+# 临时 tenant_id（正式环境从 JWT 中提取）
+DEMO_TENANT = "demo_tenant"
+
 # 允许的文件类型
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
 # 最大文件大小 50MB
@@ -70,6 +73,7 @@ async def upload_document(file: UploadFile = File(...)):
             vectorize=True,
             engine="gemini",
             db_url=db_url,
+            tenant_id=DEMO_TENANT,
         )
 
         chunks = pipeline.process_file(tmp_path)

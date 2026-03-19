@@ -765,6 +765,7 @@ class ChunkingPipeline:
         engine: str = "gemini",
         db_url: str = None,
         api_key: str = None,
+        tenant_id: str = "default",
     ):
         self.extractor = PDFExtractor()
         self.chunker = ChapterChunker(max_chunk_size, min_chunk_size)
@@ -772,6 +773,7 @@ class ChunkingPipeline:
         self.tagger = AutoTagger()
         self.vectorize = vectorize
         self.db_url = db_url
+        self.tenant_id = tenant_id
 
         if vectorize:
             self.embedder = EmbeddingService(engine=engine, api_key=api_key)

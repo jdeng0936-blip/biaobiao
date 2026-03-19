@@ -2,6 +2,7 @@
 标标 AI — 后端入口
 FastAPI + Uvicorn + async/await
 """
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -29,10 +30,26 @@ from app.api.v1.craft import router as craft_router
 from app.api.v1.variant import router as variant_router
 from app.api.v1.feedback import router as feedback_router
 
+# 导入所有 ORM Model（确保 Base.metadata 包含所有表）
+from app.models import Project, User, DesensitizeEntry, StructuredTable, FeedbackLog  # noqa: F401
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期：启动时建表，关闭时清理"""
+    from app.core.database import get_engine, Base
+    engine = get_engine()
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    # 关闭时清理（如有需要）
+
+
 app = FastAPI(
     title="标标 AI API",
     description="全程 AI 赋能的标书制作平台 API",
     version="0.3.0",
+    lifespan=lifespan,
 )
 
 # CORS 配置（开发环境）
@@ -58,26 +75,7 @@ app.include_router(variant_router)
 app.include_router(feedback_router)
 
 
-# 导入所有 ORM Model（确保 Base.metadata 包含所有表）
-from app.models import Project, User, DesensitizeEntry, StructuredTable, FeedbackLog  # noqa: F401
-
-
-@app.on_event("startup")
-async def startup_event():
-    """开发环境自动建表（正式环境应使用 Alembic 迁移）"""
-    from app.core.database import get_engine, Base
-    engine = get_engine()
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-
-@app.get("/health", tags=["公共接口"])
-async def health_check_root():
-    """系统健康检查"""
-    return {"status": "ok", "service": "biaobiao-api", "version": "1.0.0"}
-
-
-@app.get("/api/health")
+@app.get("/api/health", tags=["公共接口"])
 async def health_check():
-    """健康检查端点"""
-    return {"status": "ok", "service": "标标 AI API", "version": "0.3.0"}
+    """系统健康检查"""
+    return {"status": "ok", "service": "标标 AI API", "version": app.version}
