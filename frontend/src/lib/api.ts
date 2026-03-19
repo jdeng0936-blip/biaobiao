@@ -202,3 +202,231 @@ export function downloadBlob(blob: Blob, filename: string) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+// ============================================================
+// 项目管理 API
+// ============================================================
+export interface ProjectItem {
+  id: string;
+  name: string;
+  project_type: string;
+  status: string;
+  progress: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectStats {
+  total: number;
+  in_progress: number;
+  completed: number;
+}
+
+export async function listProjects(): Promise<ProjectItem[]> {
+  return apiRequest<ProjectItem[]>('/projects');
+}
+
+export async function getProjectStats(): Promise<ProjectStats> {
+  return apiRequest<ProjectStats>('/projects/stats');
+}
+
+export async function createProject(data: {
+  name: string;
+  project_type: string;
+}): Promise<ProjectItem> {
+  return apiRequest<ProjectItem>('/projects', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getProject(projectId: string): Promise<ProjectItem> {
+  return apiRequest<ProjectItem>(`/projects/${projectId}`);
+}
+
+export async function updateProject(
+  projectId: string,
+  data: Partial<ProjectItem>
+): Promise<ProjectItem> {
+  return apiRequest<ProjectItem>(`/projects/${projectId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+// ============================================================
+// 反馈飞轮 API
+// ============================================================
+export interface FeedbackRequest {
+  section_id: string;
+  action: 'accept' | 'edit' | 'reject';
+  original_text: string;
+  revised_text?: string;
+  section_title?: string;
+  trace_id?: string;
+  tenant_id?: string;
+}
+
+export interface FeedbackResponse {
+  success: boolean;
+  message: string;
+  flywheel_triggered: boolean;
+}
+
+export interface FeedbackStats {
+  total: number;
+  accept_count: number;
+  edit_count: number;
+  reject_count: number;
+  accept_rate: number;
+  edit_rate: number;
+  reject_rate: number;
+  flywheel_sunk: number;
+}
+
+export async function submitFeedback(data: FeedbackRequest): Promise<FeedbackResponse> {
+  return apiRequest<FeedbackResponse>('/api/v1/feedback', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getFeedbackStats(tenantId = 'default'): Promise<FeedbackStats> {
+  return apiRequest<FeedbackStats>(`/api/v1/feedback/stats?tenant_id=${tenantId}`);
+}
+
+// ============================================================
+// 评分点提取 API
+// ============================================================
+export interface ScoringOutlineRequest {
+  text: string;
+  project_type?: string;
+}
+
+export interface ScoringPoint {
+  title: string;
+  weight: number;
+  category: string;
+}
+
+export async function extractScoringOutline(
+  data: ScoringOutlineRequest
+): Promise<{ points: ScoringPoint[] }> {
+  return apiRequest('/api/v1/scoring/outline', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+// ============================================================
+// AI 生成 API
+// ============================================================
+export interface GenerateSectionRequest {
+  section_title: string;
+  section_type?: string;
+  project_context?: string;
+  scoring_points?: string[];
+  tenant_id?: string;
+}
+
+/**
+ * 流式生成章节内容（SSE）— 返回 Response 供调用方逐行解析
+ */
+export async function generateSectionStream(
+  data: GenerateSectionRequest
+): Promise<Response> {
+  const token = getAccessToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  return fetch(`${API_BASE}/api/v1/generate/section`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * AI 智能问答（SSE 流式）— 返回 Response
+ */
+export async function chatStream(data: {
+  message: string;
+  module_content?: string;
+  project_context?: string;
+}): Promise<Response> {
+  const token = getAccessToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  return fetch(`${API_BASE}/api/v1/generate/chat`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(data),
+  });
+}
+
+// ============================================================
+// 知识库 API
+// ============================================================
+export interface KnowledgeStats {
+  total_chunks: number;
+  total_files: number;
+  total_tables: number;
+}
+
+export interface KnowledgeFile {
+  id: string;
+  filename: string;
+  file_type: string;
+  size: number;
+  chunk_count: number;
+  created_at: string;
+}
+
+export async function getKnowledgeStats(): Promise<KnowledgeStats> {
+  return apiRequest<KnowledgeStats>('/api/v1/knowledge/stats');
+}
+
+export async function listKnowledgeFiles(): Promise<KnowledgeFile[]> {
+  return apiRequest<KnowledgeFile[]>('/api/v1/knowledge/files');
+}
+
+export async function searchKnowledge(
+  query: string,
+  tenantId = 'default'
+): Promise<{ results: Array<{ content: string; similarity: number; source_file: string }> }> {
+  return apiRequest('/api/v1/knowledge/search', {
+    method: 'POST',
+    body: JSON.stringify({ query, tenant_id: tenantId }),
+  });
+}
+
+// ============================================================
+// 文件上传 API
+// ============================================================
+export async function uploadDocument(file: File): Promise<{ filename: string; chunks: number }> {
+  const token = getAccessToken();
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const response = await fetch(`${API_BASE}/api/v1/upload/document`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: '上传失败' }));
+    throw new Error(error.detail || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
