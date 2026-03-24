@@ -127,21 +127,21 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[var(--bg-base)]">
       {/* TopBar — 精简版（导航已在侧边栏） */}
       <nav className="sticky top-0 z-40 glass border-b border-[var(--border-subtle)]">
-        <div className="px-6 h-14 flex items-center justify-between">
+        <div className="px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h2 className="font-bold text-sm">工作台</h2>
+            <h2 className="font-bold text-base">工作台</h2>
           </div>
 
           <div className="flex items-center gap-4">
             {/* 搜索 */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
               <input
                 type="text"
                 placeholder="搜索项目..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-1.5 w-60 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-sm text-white placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--primary)] transition-all"
+                className="pl-10 pr-4 py-2 w-72 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-sm text-white placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--primary)] transition-all"
               />
             </div>
 
@@ -155,13 +155,13 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-8 py-10">
         {/* 统计卡片 */}
         <motion.div
           initial="hidden"
           animate="visible"
           variants={{ visible: { transition: { staggerChildren: 0.08 } } }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10"
         >
           {[
             { label: "进行中项目", value: String(stats.in_progress), icon: FolderOpen, trend: null },
@@ -172,7 +172,7 @@ export default function DashboardPage() {
             <motion.div
               key={i}
               variants={fadeInUp}
-              className="p-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] group hover:border-[var(--border-default)] transition-all"
+              className="p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] group hover:border-[var(--border-default)] transition-all"
             >
               <div className="flex items-center justify-between mb-3">
                 <stat.icon className="w-4.5 h-4.5 text-[var(--text-tertiary)]" />
@@ -183,13 +183,13 @@ export default function DashboardPage() {
                 )}
               </div>
               <p className="text-2xl font-bold">{stat.value}</p>
-              <p className="text-xs text-[var(--text-tertiary)] mt-1">{stat.label}</p>
+              <p className="text-sm text-[var(--text-tertiary)] mt-1.5">{stat.label}</p>
             </motion.div>
           ))}
         </motion.div>
 
         {/* 功能快捷入口 */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {[
             { label: "资料库", desc: "商务/知识/规范/壁垒/图片", icon: BookOpen, color: "#3b82f6", href: "/library" },
             { label: "施工工艺图谱", desc: "市政+房建 248 工艺节点", icon: Wrench, color: "#10b981", href: "/craft-library" },
@@ -199,14 +199,14 @@ export default function DashboardPage() {
             <a
               key={i}
               href={entry.href}
-              className="group flex items-center gap-3 p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:border-[var(--border-default)] transition-all"
+              className="group flex items-center gap-4 p-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:border-[var(--border-default)] transition-all"
             >
               <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${entry.color}15` }}>
                 <entry.icon className="w-4.5 h-4.5" style={{ color: entry.color }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold">{entry.label}</p>
-                <p className="text-[10px] text-[var(--text-tertiary)] truncate">{entry.desc}</p>
+                <p className="text-sm font-semibold">{entry.label}</p>
+                <p className="text-xs text-[var(--text-tertiary)] truncate mt-0.5">{entry.desc}</p>
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-[var(--text-tertiary)] opacity-0 group-hover:opacity-100 transition-opacity" />
             </a>
@@ -221,42 +221,42 @@ export default function DashboardPage() {
           className="mb-8 p-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
         >
           <div className="flex items-center gap-2 mb-4">
-            <BarChart3 className="w-4 h-4 text-[var(--primary)]" />
-            <h3 className="text-sm font-bold">数据飞轮</h3>
-            <span className="text-[10px] text-[var(--text-tertiary)] ml-1">AI 自我进化引擎</span>
+            <BarChart3 className="w-5 h-5 text-[var(--primary)]" />
+            <h3 className="text-base font-bold">数据飞轮</h3>
+            <span className="text-xs text-[var(--text-tertiary)] ml-1">AI 自我进化引擎</span>
           </div>
 
           {feedbackStats && feedbackStats.total > 0 ? (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {/* 采纳 */}
               <div className="p-4 rounded-xl bg-[rgba(34,197,94,0.06)] border border-[rgba(34,197,94,0.12)]">
                 <div className="text-2xl font-bold text-[var(--success)]">{feedbackStats.accept_count}</div>
-                <div className="text-xs text-[var(--text-tertiary)] mt-1">采纳</div>
-                <div className="text-[10px] text-[var(--success)] mt-0.5">{(feedbackStats.accept_rate * 100).toFixed(1)}%</div>
+                <div className="text-sm text-[var(--text-tertiary)] mt-1">采纳</div>
+                <div className="text-xs text-[var(--success)] mt-0.5">{(feedbackStats.accept_rate * 100).toFixed(1)}%</div>
               </div>
               {/* 修改 */}
               <div className="p-4 rounded-xl bg-[rgba(99,102,241,0.06)] border border-[rgba(99,102,241,0.12)]">
                 <div className="text-2xl font-bold text-[var(--primary)]">{feedbackStats.edit_count}</div>
-                <div className="text-xs text-[var(--text-tertiary)] mt-1">修改</div>
-                <div className="text-[10px] text-[var(--primary)] mt-0.5">{(feedbackStats.edit_rate * 100).toFixed(1)}%</div>
+                <div className="text-sm text-[var(--text-tertiary)] mt-1">修改</div>
+                <div className="text-xs text-[var(--primary)] mt-0.5">{(feedbackStats.edit_rate * 100).toFixed(1)}%</div>
               </div>
               {/* 拒绝 */}
               <div className="p-4 rounded-xl bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.12)]">
                 <div className="text-2xl font-bold text-[var(--danger)]">{feedbackStats.reject_count}</div>
-                <div className="text-xs text-[var(--text-tertiary)] mt-1">拒绝</div>
-                <div className="text-[10px] text-[var(--danger)] mt-0.5">{(feedbackStats.reject_rate * 100).toFixed(1)}%</div>
+                <div className="text-sm text-[var(--text-tertiary)] mt-1">拒绝</div>
+                <div className="text-xs text-[var(--danger)] mt-0.5">{(feedbackStats.reject_rate * 100).toFixed(1)}%</div>
               </div>
               {/* 飞轮下沉 */}
               <div className="p-4 rounded-xl bg-[rgba(245,158,11,0.06)] border border-[rgba(245,158,11,0.12)]">
                 <div className="text-2xl font-bold text-[var(--warning)]">{feedbackStats.flywheel_sunk}</div>
-                <div className="text-xs text-[var(--text-tertiary)] mt-1">知识被飞轮回灌</div>
-                <div className="text-[10px] text-[var(--warning)] mt-0.5">高质量语料已入库</div>
+                <div className="text-sm text-[var(--text-tertiary)] mt-1">知识被飞轮回灌</div>
+                <div className="text-xs text-[var(--warning)] mt-0.5">高质量语料已入库</div>
               </div>
             </div>
           ) : (
             <div className="text-center py-6">
               <Sparkles className="w-8 h-8 mx-auto text-[var(--text-tertiary)] mb-2" />
-              <p className="text-xs text-[var(--text-tertiary)]">
+              <p className="text-sm text-[var(--text-tertiary)]">
                 当用户对 AI 生成的标书内容做出反馈时，数据飞轮将开始运转
               </p>
             </div>
@@ -267,7 +267,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-xl font-bold">我的标书项目</h1>
-            <p className="text-sm text-[var(--text-tertiary)] mt-1">管理您的所有标书创作项目</p>
+            <p className="text-sm text-[var(--text-tertiary)] mt-1.5">管理您的所有标书创作项目</p>
           </div>
           <button
             onClick={() => (window.location.href = "/workspace/new")}
@@ -283,7 +283,7 @@ export default function DashboardPage() {
           initial="hidden"
           animate="visible"
           variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
-          className="space-y-3"
+          className="space-y-4"
         >
           {filteredProjects.map((project) => {
             const status = statusMap[project.status];
@@ -292,7 +292,7 @@ export default function DashboardPage() {
                 key={project.id}
                 variants={fadeInUp}
                 onClick={() => (window.location.href = `/workspace/${project.id}`)}
-                className="group flex items-center gap-4 p-5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:border-[var(--border-default)] hover:bg-[var(--bg-surface)] transition-all cursor-pointer"
+                className="group flex items-center gap-5 p-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:border-[var(--border-default)] hover:bg-[var(--bg-surface)] transition-all cursor-pointer"
               >
                 {/* 文件图标 */}
                 <div className="w-10 h-10 rounded-lg bg-[var(--primary-glow)] flex items-center justify-center shrink-0">
@@ -305,14 +305,14 @@ export default function DashboardPage() {
                     {project.name}
                   </h3>
                   <div className="flex items-center gap-3 mt-1.5">
-                    <span className="text-xs text-[var(--text-tertiary)]">{typeLabel(project.project_type)}</span>
-                    <span className="text-xs text-[var(--text-tertiary)]">·</span>
-                    <span className="text-xs text-[var(--text-tertiary)] flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
+                    <span className="text-sm text-[var(--text-tertiary)]">{typeLabel(project.project_type)}</span>
+                    <span className="text-sm text-[var(--text-tertiary)]">·</span>
+                    <span className="text-sm text-[var(--text-tertiary)] flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" />
                       {formatTime(project.updated_at)}
                     </span>
-                    <span className="text-xs text-[var(--text-tertiary)]">·</span>
-                    <span className="text-xs text-[var(--text-tertiary)]">
+                    <span className="text-sm text-[var(--text-tertiary)]">·</span>
+                    <span className="text-sm text-[var(--text-tertiary)]">
                       进度 {project.progress}%
                     </span>
                   </div>
@@ -321,7 +321,7 @@ export default function DashboardPage() {
                 {/* 状态标签 */}
                 <div className="flex items-center gap-3">
                   <span
-                    className="px-3 py-1 rounded-full text-xs font-medium"
+                    className="px-3 py-1 rounded-full text-sm font-medium"
                     style={{ color: status?.color || 'var(--text-tertiary)', background: status?.bg || 'rgba(113,113,122,0.12)' }}
                   >
                     {status?.label || project.status}

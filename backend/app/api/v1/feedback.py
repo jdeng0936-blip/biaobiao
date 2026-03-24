@@ -9,6 +9,7 @@ from typing import Optional, Literal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.deps import get_tenant_id
 from app.services.feedback_service import FeedbackFlywheelService
 
 router = APIRouter(prefix="/api/v1/feedback", tags=["反馈飞轮"])
@@ -22,7 +23,6 @@ class FeedbackRequest(BaseModel):
     revised_text: Optional[str] = Field(None, description="用户修改后的内容（仅 action=edit 时必填）")
     section_title: Optional[str] = Field(None, description="章节标题")
     trace_id: Optional[str] = Field(None, description="LangFuse 跟踪 ID")
-    tenant_id: str = Field(default="default", description="租户 ID")
 
 
 class FeedbackResponse(BaseModel):
@@ -45,6 +45,7 @@ class FeedbackStatsResponse(BaseModel):
 @router.post("", response_model=FeedbackResponse)
 async def submit_feedback(
     req: FeedbackRequest,
+    tenant_id: str = Depends(get_tenant_id),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -61,7 +62,7 @@ async def submit_feedback(
         )
 
     try:
-        service = FeedbackFlywheelService(tenant_id=req.tenant_id)
+        service = FeedbackFlywheelService(tenant_id=tenant_id)
         flywheel_triggered = await service.ingest_feedback(
             db=db,
             target_section=req.section_title or req.section_id,
@@ -89,7 +90,7 @@ async def submit_feedback(
 
 @router.get("/stats", response_model=FeedbackStatsResponse)
 async def get_feedback_stats(
-    tenant_id: str = "default",
+    tenant_id: str = Depends(get_tenant_id),
     db: AsyncSession = Depends(get_db),
 ):
     """

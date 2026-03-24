@@ -2,31 +2,21 @@
 知识库检索 API 路由
 提供语义搜索、知识库统计、文件列表等端点
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Optional
 
+from app.core.deps import get_tenant_id
 from app.services.knowledge_service import KnowledgeService
 from app.services.embedding_service import GeminiEmbedding
 
 router = APIRouter(prefix="/api/v1/knowledge", tags=["知识库"])
 
-# 临时 tenant_id（正式环境从 JWT 中提取）
-DEMO_TENANT = "demo_tenant"
-
-# 服务单例（FastAPI 生命周期内复用）
-_knowledge_service: KnowledgeService | None = None
+# Embedding 服务单例（与 tenant 无关）
 _embedding_service: GeminiEmbedding | None = None
 
 
-def get_knowledge_service() -> KnowledgeService:
-    global _knowledge_service
-    if _knowledge_service is None:
-        _knowledge_service = KnowledgeService(tenant_id=DEMO_TENANT)
-    return _knowledge_service
-
-
-def get_embedding_service() -> GeminiEmbedding:
+def _get_embedding_service() -> GeminiEmbedding:
     global _embedding_service
     if _embedding_service is None:
         _embedding_service = GeminiEmbedding()
@@ -72,7 +62,10 @@ class SearchResponse(BaseModel):
 # API 端点
 # ============================================================
 @router.post("/search", response_model=SearchResponse)
-async def search_knowledge(req: SearchRequest):
+async def search_knowledge(
+    req: SearchRequest,
+    tenant_id: str = Depends(get_tenant_id),
+):
     """
     🔍 语义搜索知识片段
 
@@ -85,7 +78,7 @@ async def search_knowledge(req: SearchRequest):
     - "质量保证体系组织架构"
     """
     # 1. 将查询文本向量化
-    emb_service = get_embedding_service()
+    emb_service = _get_embedding_service()
     if not emb_service.ready:
         raise HTTPException(
             status_code=503,
@@ -98,7 +91,7 @@ async def search_knowledge(req: SearchRequest):
         raise HTTPException(status_code=500, detail=f"向量化失败: {str(e)}")
 
     # 2. 语义搜索
-    kb_service = get_knowledge_service()
+    kb_service = KnowledgeService(tenant_id=tenant_id)
     try:
         results = kb_service.search(
             query_embedding=query_vector,
@@ -118,30 +111,34 @@ async def search_knowledge(req: SearchRequest):
 
 
 @router.get("/stats")
-async def get_knowledge_stats():
+async def get_knowledge_stats(
+    tenant_id: str = Depends(get_tenant_id),
+):
     """
     📊 知识库统计信息
 
     返回总片段数、文件数、数据密度分布等
     """
-    kb_service = get_knowledge_service()
+    kb_service = KnowledgeService(tenant_id=tenant_id)
     try:
-        stats = kb_service.get_stats()
+        stats = await kb_service.get_stats_async()
         return {"status": "ok", "data": stats}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"查询失败: {str(e)}")
 
 
 @router.get("/files")
-async def list_knowledge_files():
+async def list_knowledge_files(
+    tenant_id: str = Depends(get_tenant_id),
+):
     """
     📂 知识库文件列表
 
     返回所有已入库的文件及其统计信息
     """
-    kb_service = get_knowledge_service()
+    kb_service = KnowledgeService(tenant_id=tenant_id)
     try:
-        files = kb_service.get_files()
+        files = await kb_service.get_files_async()
         # 时间序列化处理
         for f in files:
             if f.get("first_added"):

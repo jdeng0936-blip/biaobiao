@@ -12,6 +12,7 @@ from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.deps import get_tenant_id
 from app.models.project import Project
 
 
@@ -61,12 +62,13 @@ class ProjectOut(BaseModel):
 
 # ──────────────────────────── 接口实现 ────────────────────────────
 
-# 临时 tenant_id（正式环境从 JWT 中提取）
-DEMO_TENANT = "demo_tenant"
-
 
 @router.post("", response_model=ProjectOut)
-async def create_project(body: ProjectCreate, db: AsyncSession = Depends(get_db)):
+async def create_project(
+    body: ProjectCreate,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id),
+):
     """新建标书项目"""
     project = Project(
         name=body.name,
@@ -74,7 +76,7 @@ async def create_project(body: ProjectCreate, db: AsyncSession = Depends(get_db)
         status="draft",
         description=body.description,
         progress=0,
-        tenant_id=DEMO_TENANT,
+        tenant_id=tenant_id,
     )
     db.add(project)
     await db.commit()
@@ -86,9 +88,10 @@ async def create_project(body: ProjectCreate, db: AsyncSession = Depends(get_db)
 async def list_projects(
     status: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id),
 ):
     """获取项目列表（支持按状态过滤）"""
-    stmt = select(Project).where(Project.tenant_id == DEMO_TENANT)
+    stmt = select(Project).where(Project.tenant_id == tenant_id)
     if status:
         stmt = stmt.where(Project.status == status)
     stmt = stmt.order_by(Project.updated_at.desc())
@@ -98,23 +101,26 @@ async def list_projects(
 
 
 @router.get("/stats")
-async def project_stats(db: AsyncSession = Depends(get_db)):
+async def project_stats(
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id),
+):
     """项目统计数据（供 Dashboard 使用）"""
     # 总项目数
     total = await db.scalar(
-        select(func.count()).select_from(Project).where(Project.tenant_id == DEMO_TENANT)
+        select(func.count()).select_from(Project).where(Project.tenant_id == tenant_id)
     )
     # 进行中
     in_progress = await db.scalar(
         select(func.count()).select_from(Project).where(
-            Project.tenant_id == DEMO_TENANT,
+            Project.tenant_id == tenant_id,
             Project.status.in_(["draft", "generating", "reviewing"]),
         )
     )
     # 已完成
     completed = await db.scalar(
         select(func.count()).select_from(Project).where(
-            Project.tenant_id == DEMO_TENANT,
+            Project.tenant_id == tenant_id,
             Project.status == "completed",
         )
     )
@@ -126,12 +132,16 @@ async def project_stats(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{project_id}", response_model=ProjectOut)
-async def get_project(project_id: str, db: AsyncSession = Depends(get_db)):
+async def get_project(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id),
+):
     """获取单个项目详情"""
     result = await db.execute(
         select(Project).where(
             Project.id == _parse_uuid(project_id),
-            Project.tenant_id == DEMO_TENANT,
+            Project.tenant_id == tenant_id,
         )
     )
     project = result.scalar_one_or_none()
@@ -145,13 +155,14 @@ async def update_project(
     project_id: str,
     body: ProjectUpdate,
     db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id),
 ):
     """更新项目信息"""
     # 先查出来
     result = await db.execute(
         select(Project).where(
             Project.id == _parse_uuid(project_id),
-            Project.tenant_id == DEMO_TENANT,
+            Project.tenant_id == tenant_id,
         )
     )
     project = result.scalar_one_or_none()
@@ -170,12 +181,16 @@ async def update_project(
 
 
 @router.delete("/{project_id}")
-async def delete_project(project_id: str, db: AsyncSession = Depends(get_db)):
+async def delete_project(
+    project_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: str = Depends(get_tenant_id),
+):
     """删除项目"""
     result = await db.execute(
         select(Project).where(
             Project.id == _parse_uuid(project_id),
-            Project.tenant_id == DEMO_TENANT,
+            Project.tenant_id == tenant_id,
         )
     )
     project = result.scalar_one_or_none()
@@ -201,3 +216,4 @@ def _to_out(p: Project) -> ProjectOut:
         created_at=p.created_at.isoformat() if p.created_at else "",
         updated_at=p.updated_at.isoformat() if p.updated_at else "",
     )
+

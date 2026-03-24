@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>能力现状与演进路线</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="/dev/stdin" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">能力现状与演进路线</h1>
+</header>
+<h1 id="标标-ai-能力现状与演进路线">标标 AI — 能力现状与演进路线</h1>
+<blockquote>
+<p>2026-03-24 | 回答：图片库、数据体量、自我迭代、自动抓取</p>
+</blockquote>
+<hr />
+<h2 id="一图片库">一、图片库</h2>
+<h3 id="当前状态-未实现">📍 当前状态：❌ 未实现</h3>
+<p>当前系统只处理文本（PDF/Word/TXT
+中的文字内容），<strong>没有图片管理模块</strong>。</p>
+<h3 id="需要建设什么">🔧 需要建设什么？</h3>
+<p>技术标书中的图片需求非常明确——可以预分类：</p>
+<table>
+<thead>
+<tr>
+<th>图片分类</th>
+<th>举例</th>
+<th>管理方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>施工工艺图</strong></td>
+<td>钢筋绑扎节点图、模板支撑示意图</td>
+<td>按工艺节点分类标签</td>
+</tr>
+<tr>
+<td><strong>施工流程图</strong></td>
+<td>施工工序流程、质量控制流程</td>
+<td>按章节类型关联</td>
+</tr>
+<tr>
+<td><strong>平面布置图</strong></td>
+<td>施工现场临设布置</td>
+<td>按项目类型模板化</td>
+</tr>
+<tr>
+<td><strong>进度计划图</strong></td>
+<td>甘特图、横道图</td>
+<td>按工期动态生成</td>
+</tr>
+<tr>
+<td><strong>机械设备图</strong></td>
+<td>、塔吊、泵车照片</td>
+<td>按设备型号索引</td>
+</tr>
+<tr>
+<td><strong>安全文明图</strong></td>
+<td>安全标识、围挡效果图</td>
+<td>通用素材库</td>
+</tr>
+<tr>
+<td><strong>组织机构图</strong></td>
+<td>项目部组织架构图</td>
+<td>按人员配置动态渲染</td>
+</tr>
+</tbody>
+</table>
+<h3 id="建设方案建议-v0.4-迭代">🏗 建设方案（建议 v0.4 迭代）</h3>
+<pre><code>1. 新建 image_library 模块
+   ├── 上传接口：支持 PNG/JPG/CAD 导出图
+   ├── 标签系统：工艺类型 + 工程类型 + 章节关联
+   ├── 搜索：按标签/关键词检索
+   └── AI 自动插图：生成章节时自动匹配推荐图片
+
+2. 数据模型
+   ├── image_id (UUID)
+   ├── filename / url
+   ├── category (施工工艺/流程/布置/安全)
+   ├── tags [&quot;钢筋&quot;, &quot;绑扎&quot;, &quot;节点&quot;]
+   ├── applicable_sections [&quot;施工方案&quot;, &quot;质量保证&quot;]
+   └── tenant_id (租户隔离)
+
+3. AI 集成
+   ├── 章节生成时 → 检索匹配图片 → 插入占位符
+   └── Word 导出时 → 占位符替换为真实图片</code></pre>
+<h3 id="初期需要多少图片">📊 初期需要多少图片？</h3>
+<table>
+<thead>
+<tr>
+<th>工程类型</th>
+<th>建议图片量</th>
+<th>覆盖范围</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>市政道路</td>
+<td><strong>80~120 张</strong></td>
+<td>路基、路面、排水、交安、绿化</td>
+</tr>
+<tr>
+<td>房建工程</td>
+<td><strong>100~150 张</strong></td>
+<td>基坑、结构、装饰、机电、消防</td>
+</tr>
+<tr>
+<td>水利工程</td>
+<td><strong>60~80 张</strong></td>
+<td>围堰、浇筑、防渗、闸门</td>
+</tr>
+<tr>
+<td>通用素材</td>
+<td><strong>50~80 张</strong></td>
+<td>安全文明、环保、组织架构模板</td>
+</tr>
+<tr>
+<td><strong>合计初期</strong></td>
+<td><strong>~300 张</strong></td>
+<td>覆盖核心工艺节点</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="二初期测试需要的数据体量">二、初期测试需要的数据体量</h2>
+<h3 id="最小可用数据集mvp-test">📍 最小可用数据集（MVP Test）</h3>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>最低量</th>
+<th>推荐量</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>中标范文</strong></td>
+<td>3 份</td>
+<td>10 份</td>
+<td>同类型项目的完整技术标</td>
+</tr>
+<tr>
+<td><strong>招标文件</strong></td>
+<td>1 份</td>
+<td>3 份</td>
+<td>含评分标准的完整招标文件</td>
+</tr>
+<tr>
+<td><strong>行业规范</strong></td>
+<td>0 份</td>
+<td>5 份</td>
+<td>GB/T、JTG 等核心规范</td>
+</tr>
+<tr>
+<td><strong>企业资料</strong></td>
+<td>1 份</td>
+<td>3 份</td>
+<td>公司简介、业绩、资质</td>
+</tr>
+<tr>
+<td><strong>施工工艺</strong></td>
+<td>系统内置 248 个</td>
+<td>—</td>
+<td>工艺图谱已包含</td>
+</tr>
+<tr>
+<td><strong>知识切片总量</strong></td>
+<td>~500 条</td>
+<td>~3000 条</td>
+<td>系统自动切片</td>
+</tr>
+</tbody>
+</table>
+<h3 id="测试阶段建议">💡 测试阶段建议</h3>
+<pre><code>第一周：投喂 3 份中标范文 + 1 份招标文件
+       → 测试基本生成流程是否通畅
+
+第二周：增加到 10 份范文 + 3 份规范
+       → 对比生成质量提升幅度
+
+第三周：加入企业资料 + 模拟多用户
+       → 测试多租户隔离 + 个性化生成</code></pre>
+<hr />
+<h2 id="三系统自我迭代能力">三、系统自我迭代能力</h2>
+<h3 id="当前已实现-数据飞轮被动进化">📍 当前已实现：✅
+数据飞轮（被动进化）</h3>
+<pre><code>用户反馈 → 飞轮机制 → 知识回灌
+   ↓
+✅ 采纳 → 原文标记为&quot;优质语料&quot;→ 提升类似内容生成权重
+✏️ 修改 → 记录原文+修改版 → AI 学习修改偏好（diff_ratio）
+❌ 拒绝 → 标记为&quot;低质量&quot;→ 降低类似输出概率
+   ↓
+flywheel_sunk 指标 → 已回灌到知识库的高质量语料数量</code></pre>
+<p><strong>这是被动进化</strong>——依赖用户操作触发。</p>
+<h3 id="未来可建设主动进化">🔮 未来可建设：主动进化</h3>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>当前</th>
+<th>目标</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>用户反馈学习</td>
+<td>✅ 已有</td>
+<td>持续优化</td>
+</tr>
+<tr>
+<td>A/B 测试生成</td>
+<td>❌</td>
+<td>同一章节生成 2 版，用户选优</td>
+</tr>
+<tr>
+<td>生成质量评分</td>
+<td>❌</td>
+<td>RAG 检索命中率自动统计</td>
+</tr>
+<tr>
+<td>Prompt 自动调优</td>
+<td>❌</td>
+<td>基于反馈数据自动优化 Prompt</td>
+</tr>
+<tr>
+<td>交叉学习</td>
+<td>❌</td>
+<td>租户 A 的优质语料（脱敏后）→ 全局知识</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="四自动抓取招投标中心">四、自动抓取招投标中心</h2>
+<h3 id="当前状态-未实现-1">📍 当前状态：❌ 未实现</h3>
+<h3 id="可行性分析">🔧 可行性分析</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>评估</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>技术可行性</strong></td>
+<td>✅ 高 — Python 爬虫生态成熟（Scrapy/Playwright）</td>
+</tr>
+<tr>
+<td><strong>法律风险</strong></td>
+<td>⚠️ 中 — 需确认各平台 robots.txt 和用户协议</td>
+</tr>
+<tr>
+<td><strong>数据价值</strong></td>
+<td>✅ 高 — 招标公告/中标公示/评分标准 是核心训练数据</td>
+</tr>
+<tr>
+<td><strong>实现复杂度</strong></td>
+<td>🟡 中 — 各地平台格式不统一，需要适配器模式</td>
+</tr>
+</tbody>
+</table>
+<h3 id="建设方案建议-v0.5-迭代">🏗 建设方案（建议 v0.5 迭代）</h3>
+<pre><code>【可抓取的数据源】
+├── 全国公共资源交易平台（统一接口）
+├── 各省市公共资源交易中心
+├── 中国招标投标公共服务平台
+└── 行业垂直平台（建设工程招投标网等）
+
+【可抓取的内容类型】
+├── 招标公告 → 提取评分标准模板
+├── 中标公示 → 学习中标价格/团队配置规律
+├── 招标文件附件 → 扩充知识库
+└── 行业动态/政策 → 更新规范引用
+
+【架构设计】
+                    ┌─ 调度器 (APScheduler)
+                    │    · 每日定时抓取
+                    │    · 增量更新（防重复）
+                    ↓
+  数据源适配器       →  内容清洗管道  →  知识库入库
+  (各平台接口)           · 去HTML       · 自动切片
+                         · 提取正文     · 向量化
+                         · 分类标签     · 租户:public
+
+【伦理与合规红线】
+├── ✅ 只抓取公开信息（招标公告、中标公示）
+├── ✅ 遵守 robots.txt
+├── ✅ 控制抓取频率（≤1次/秒，带 User-Agent）
+├── ❌ 不抓取需要登录才能访问的内容
+└── ❌ 不存储/传播涉及商业秘密的投标文件</code></pre>
+<hr />
+<h2 id="五演进路线图">五、演进路线图</h2>
+<pre><code>v0.3（当前）                    v0.4（下一个）              v0.5（远期）
+┌──────────────┐      ┌──────────────────┐      ┌──────────────────┐
+│ ✅ 知识库文本  │      │ 🔧 图片库管理     │      │ 🔮 自动抓取招投标 │
+│ ✅ AI 生成    │  →   │ 🔧 图片自动插入   │  →   │ 🔮 主动进化引擎   │
+│ ✅ 反审标     │      │ 🔧 A/B 测试生成   │      │ 🔮 多源数据融合   │
+│ ✅ 变体引擎   │      │ 🔧 生成质量评分   │      │ 🔮 Prompt 自调优  │
+│ ✅ 数据飞轮   │      │ 🔧 OCR 图片识别   │      │ 🔮 跨租户知识沉淀 │
+└──────────────┘      └──────────────────┘      └──────────────────┘</code></pre>
+<hr />
+<blockquote>
+<p>[!IMPORTANT]
+<strong>当前系统已具备”被动进化”能力</strong>（数据飞轮）。图片库和主动爬取属于下一阶段建设，建议优先完成
+v0.3 的测试验证后再启动。</p>
+</blockquote>
+</body>
+</html>

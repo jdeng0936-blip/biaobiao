@@ -270,7 +270,6 @@ export interface FeedbackRequest {
   revised_text?: string;
   section_title?: string;
   trace_id?: string;
-  tenant_id?: string;
 }
 
 export interface FeedbackResponse {
@@ -297,8 +296,8 @@ export async function submitFeedback(data: FeedbackRequest): Promise<FeedbackRes
   });
 }
 
-export async function getFeedbackStats(tenantId = 'default'): Promise<FeedbackStats> {
-  return apiRequest<FeedbackStats>(`/api/v1/feedback/stats?tenant_id=${tenantId}`);
+export async function getFeedbackStats(): Promise<FeedbackStats> {
+  return apiRequest<FeedbackStats>('/api/v1/feedback/stats');
 }
 
 // ============================================================
@@ -332,7 +331,6 @@ export interface GenerateSectionRequest {
   section_type?: string;
   project_context?: string;
   scoring_points?: string[];
-  tenant_id?: string;
 }
 
 /**
@@ -402,12 +400,11 @@ export async function listKnowledgeFiles(): Promise<KnowledgeFile[]> {
 }
 
 export async function searchKnowledge(
-  query: string,
-  tenantId = 'default'
+  query: string
 ): Promise<{ results: Array<{ content: string; similarity: number; source_file: string }> }> {
   return apiRequest('/api/v1/knowledge/search', {
     method: 'POST',
-    body: JSON.stringify({ query, tenant_id: tenantId }),
+    body: JSON.stringify({ query }),
   });
 }
 

@@ -39,7 +39,7 @@ services:
     container_name: biaobiao-redis
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
     ports:
-      - "${REDIS_PORT:-6380}:6379"
+      - "${REDIS_PORT:-6382}:6379"
     volumes:
       - biaobiao_redis:/data
     healthcheck:
@@ -96,7 +96,7 @@ services:
       dockerfile: Dockerfile
     container_name: biaobiao-web
     ports:
-      - "${FE_PORT:-3001}:3000"
+      - "${FE_PORT:-3100}:3000"
     environment:
       NEXT_PUBLIC_API_BASE: http://localhost:${API_PORT:-8001}
     depends_on:

@@ -10,7 +10,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers
 revision = "001_feedback_logs"
-down_revision = None
+down_revision = "000_initial_schema"
 branch_labels = None
 depends_on = None
 

@@ -107,12 +107,18 @@ class GeminiProvider(BaseLLMProvider):
         texts: list[str],
         model_name: str = "gemini-embedding-001",
     ) -> list[list[float]]:
-        """Gemini Embedding 向量化"""
+        """Gemini Embedding 向量化（异步包装，避免阻塞事件循环）"""
         if not self.is_ready():
             raise RuntimeError("Gemini Provider 未就绪")
 
-        result = self.client.models.embed_content(
-            model=model_name,
-            contents=texts,
-        )
+        import asyncio
+
+        def _do_embed():
+            return self.client.models.embed_content(
+                model=model_name,
+                contents=texts,
+            )
+
+        result = await asyncio.to_thread(_do_embed)
         return [emb.values for emb in result.embeddings]
+

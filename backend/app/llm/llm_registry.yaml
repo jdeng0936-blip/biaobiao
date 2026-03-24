@@ -68,6 +68,38 @@ tasks:
     max_output_tokens: 256
     description: "表格类型分类与标签提取"
 
+  # 评分点提取（从招标文件提取评分标准，JSON 输出）
+  bid_extract:
+    primary: gemini-2.5-flash
+    fallback: gpt-4o-mini
+    temperature: 0.1
+    max_output_tokens: 4096
+    description: "从招标文件中提取评分点和评分细则，输出结构化 JSON"
+
+  # 目录大纲生成（评分点驱动，JSON 输出）
+  bid_outline:
+    primary: gemini-2.5-flash
+    fallback: gpt-4o-mini
+    temperature: 0.3
+    max_output_tokens: 4096
+    description: "根据评分点生成投标文件目录大纲，输出 JSON 数组"
+
+  # 合规审查（L2 内容审查需要 LLM 语义分析）
+  compliance_check:
+    primary: gemini-2.5-flash
+    fallback: gpt-4o-mini
+    temperature: 0.1
+    max_output_tokens: 2048
+    description: "合规审查：评分点覆盖度、关键词缺失、数据一致性检查"
+
+  # 多轮润色（术语→文风→逻辑→专业→亮点）
+  polish:
+    primary: gemini-2.5-flash
+    fallback: gpt-4o-mini
+    temperature: 0.3
+    max_output_tokens: 8192
+    description: "多轮递进式润色：术语规范、文风统一、逻辑增强、专业深化、亮点提炼"
+
 # ============================================================
 # Provider 配置
 # ============================================================

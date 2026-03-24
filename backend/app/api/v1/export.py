@@ -1,23 +1,14 @@
 """
 标书导出 API 路由
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from app.core.deps import get_tenant_id
 from app.services.export_service import BidExportService
 
 router = APIRouter(prefix="/api/v1/export", tags=["导出"])
-
-# 服务单例
-_service: BidExportService | None = None
-
-
-def get_service() -> BidExportService:
-    global _service
-    if _service is None:
-        _service = BidExportService()
-    return _service
 
 
 # ============================================================
@@ -34,7 +25,10 @@ class ExportWordRequest(BaseModel):
 # API 端点
 # ============================================================
 @router.post("/word")
-async def export_word(req: ExportWordRequest):
+async def export_word(
+    req: ExportWordRequest,
+    tenant_id: str = Depends(get_tenant_id),
+):
     """
     📄 导出标书为 Word 文档
 
@@ -44,7 +38,7 @@ async def export_word(req: ExportWordRequest):
     if not req.sections:
         raise HTTPException(status_code=400, detail="章节内容不能为空")
 
-    service = get_service()
+    service = BidExportService()
     try:
         docx_bytes = service.export_document(
             project_name=req.project_name,

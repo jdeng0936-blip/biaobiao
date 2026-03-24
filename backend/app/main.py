@@ -29,6 +29,8 @@ from app.api.v1.project import router as project_router
 from app.api.v1.craft import router as craft_router
 from app.api.v1.variant import router as variant_router
 from app.api.v1.feedback import router as feedback_router
+from app.api.v1.compliance import router as compliance_router
+from app.api.v1.polish import router as polish_router
 
 # 导入所有 ORM Model（确保 Base.metadata 包含所有表）
 from app.models import Project, User, DesensitizeEntry, StructuredTable, FeedbackLog  # noqa: F401
@@ -52,10 +54,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS 配置（开发环境）
+# CORS 配置（从环境变量读取，生产环境在 .env 中覆盖）
+from app.core.config import get_settings as _get_settings
+_cors_origins = [o.strip() for o in _get_settings().CORS_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -73,6 +77,8 @@ app.include_router(project_router)
 app.include_router(craft_router)
 app.include_router(variant_router)
 app.include_router(feedback_router)
+app.include_router(compliance_router)
+app.include_router(polish_router)
 
 
 @app.get("/api/health", tags=["公共接口"])

@@ -75,7 +75,8 @@ body {
   background: var(--bg-base);
   color: var(--text-primary);
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.7;
   overflow-x: hidden;
 }
 

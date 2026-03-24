@@ -10,12 +10,34 @@ from typing import Optional
 
 import psycopg2
 import psycopg2.extras
+import psycopg2.pool
 
 logger = logging.getLogger("knowledge_service")
 
+# 进程级连接池（所有 KnowledgeService 实例共享）
+_pool: psycopg2.pool.SimpleConnectionPool | None = None
+
+
+def _get_pool(db_url: str) -> psycopg2.pool.SimpleConnectionPool:
+    """获取或创建进程级连接池"""
+    global _pool
+    if _pool is None or _pool.closed:
+        _pool = psycopg2.pool.SimpleConnectionPool(
+            minconn=1,
+            maxconn=5,
+            dsn=db_url,
+        )
+        logger.info(f"✅ psycopg2 连接池已创建 (1-5)")
+    return _pool
+
 
 class KnowledgeService:
-    """知识库三层检索核心服务"""
+    """知识库三层检索核心服务
+
+    注意：内部使用同步 psycopg2 连接池，在 FastAPI 异步路由中调用时必须通过
+    async 包装方法（search_async/get_stats_async/get_files_async）
+    以避免阻塞事件循环。
+    """
 
     def __init__(self, db_url: str = None, tenant_id: str = "default"):
         raw_url = db_url or os.getenv(
@@ -28,9 +50,10 @@ class KnowledgeService:
 
     @property
     def conn(self):
-        """懒加载数据库连接"""
+        """从连接池获取连接（懒加载）"""
         if self._conn is None or self._conn.closed:
-            self._conn = psycopg2.connect(self.db_url)
+            pool = _get_pool(self.db_url)
+            self._conn = pool.getconn()
         return self._conn
 
     # ============================================================
@@ -273,8 +296,9 @@ class KnowledgeService:
     # ============================================================
     # 统计与文件列表（保持不变）
     # ============================================================
-    def get_stats(self) -> dict:
-        """获取知识库统计信息（含结构化表格）"""
+    def get_stats(self, tenant_id: str = None) -> dict:
+        """获取知识库统计信息（含结构化表格）— 强制 tenant 过滤"""
+        tid = tenant_id or self.tenant_id
         stats = {}
 
         # training_chunks 统计
@@ -290,7 +314,8 @@ class KnowledgeService:
                     count(*) FILTER (WHERE data_density = 'low') as low_density,
                     count(*) FILTER (WHERE has_params = true) as with_params
                 FROM training_chunks
-            """)
+                WHERE tenant_id = %s
+            """, (tid,))
             row = cur.fetchone()
 
         stats.update({
@@ -315,7 +340,8 @@ class KnowledgeService:
                         count(DISTINCT source_file) as table_files,
                         count(DISTINCT table_type) as table_types
                     FROM structured_tables
-                """)
+                    WHERE tenant_id = %s
+                """, (tid,))
                 st_row = cur.fetchone()
                 stats["structured_tables"] = {
                     "total_rows": st_row["total_rows"],
@@ -327,8 +353,9 @@ class KnowledgeService:
 
         return stats
 
-    def get_files(self) -> list[dict]:
-        """获取知识库中所有文件列表"""
+    def get_files(self, tenant_id: str = None) -> list[dict]:
+        """获取知识库中所有文件列表 — 强制 tenant 过滤"""
+        tid = tenant_id or self.tenant_id
         with self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
                 SELECT
@@ -339,9 +366,10 @@ class KnowledgeService:
                     count(*) FILTER (WHERE has_params = true) as with_params,
                     min(created_at) as first_added
                 FROM training_chunks
+                WHERE tenant_id = %s
                 GROUP BY source_file
                 ORDER BY count(*) DESC
-            """)
+            """, (tid,))
             return [dict(row) for row in cur.fetchall()]
 
     def insert_feedback_chunk(
@@ -405,5 +433,31 @@ class KnowledgeService:
             return False
 
     def close(self):
+        """归还连接到连接池"""
         if self._conn and not self._conn.closed:
-            self._conn.close()
+            pool = _get_pool(self.db_url)
+            pool.putconn(self._conn)
+            self._conn = None
+
+    # ============================================================
+    # Async 包装方法 — 供 FastAPI 异步路由调用
+    # ============================================================
+    async def search_async(self, **kwargs) -> list[dict]:
+        """异步包装 search()，避免阻塞事件循环"""
+        import asyncio
+        return await asyncio.to_thread(self.search, **kwargs)
+
+    async def search_semantic_async(self, **kwargs) -> list[dict]:
+        """异步包装 search_semantic()"""
+        import asyncio
+        return await asyncio.to_thread(self.search_semantic, **kwargs)
+
+    async def get_stats_async(self, tenant_id: str = None) -> dict:
+        """异步包装 get_stats()"""
+        import asyncio
+        return await asyncio.to_thread(self.get_stats, tenant_id)
+
+    async def get_files_async(self, tenant_id: str = None) -> list[dict]:
+        """异步包装 get_files()"""
+        import asyncio
+        return await asyncio.to_thread(self.get_files, tenant_id)

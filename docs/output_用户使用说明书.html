@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>用户使用说明书</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="/dev/stdin" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">用户使用说明书</h1>
+</header>
+<h1 id="标标-ai-系统使用说明书">标标 AI — 系统使用说明书</h1>
+<blockquote>
+<p>版本：v0.3.0 | 更新日期：2026-03-24</p>
+</blockquote>
+<hr />
+<h2 id="一系统概述">一、系统概述</h2>
+<p><strong>标标 AI</strong> 是一款 AI
+驱动的智能标书编制平台，面向工程类（市政道路/房建/水利）、服务类、货物类招标文件的自动化编写。核心能力包括：</p>
+<ul>
+<li>🤖 <strong>AI
+章节生成</strong>：基于招标文件自动生成投标响应内容</li>
+<li>📚 <strong>知识库管理</strong>：上传历史标书/规范文档，AI
+自动检索引用</li>
+<li>🔄
+<strong>变体引擎</strong>：一键生成多份不重复标书，满足围标检测</li>
+<li>🛡️ <strong>反审标检测</strong>：检测 AI 痕迹，规避评审风险</li>
+<li>📊 <strong>数据飞轮</strong>：用户反馈驱动 AI 自我进化</li>
+</ul>
+<hr />
+<h2 id="二快速上手">二、快速上手</h2>
+<h3 id="登录">2.1 登录</h3>
+<ol type="1">
+<li>访问系统首页（默认 <code>http://localhost:3001</code>）</li>
+<li>输入邮箱和密码，点击”登录”</li>
+<li>开发模式下可点击 <strong>🚀 演示模式 · 一键进入</strong>
+跳过登录</li>
+</ol>
+<h3 id="工作台dashboard">2.2 工作台（Dashboard）</h3>
+<p>登录后进入工作台，包含：</p>
+<table>
+<thead>
+<tr>
+<th>区域</th>
+<th>功能</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>统计卡片</strong></td>
+<td>进行中项目数、总项目数、已完成数、AI 反馈量</td>
+</tr>
+<tr>
+<td><strong>快捷入口</strong></td>
+<td>资料库 / 工艺图谱 / 变体引擎 / 反审标检测</td>
+</tr>
+<tr>
+<td><strong>数据飞轮</strong></td>
+<td>展示 AI 采纳/修改/拒绝统计及知识回灌情况</td>
+</tr>
+<tr>
+<td><strong>项目列表</strong></td>
+<td>全部标书项目，可搜索、点击进入编辑</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="三核心功能详解">三、核心功能详解</h2>
+<h3 id="新建标书项目">3.1 新建标书项目</h3>
+<ol type="1">
+<li>点击侧边栏底部 <strong>“新建标书项目”</strong> 或工作台右上角
+<strong>“新建标书”</strong></li>
+<li>填写项目名称和类型（工程类/服务类/货物类）</li>
+<li>系统自动创建项目并跳转到工作区</li>
+</ol>
+<h3 id="工作区workspace">3.2 工作区（Workspace）</h3>
+<p>进入项目后进入标书编辑工作区：</p>
+<ul>
+<li><strong>左侧</strong>：章节目录树，根据招标文件自动生成</li>
+<li><strong>右侧</strong>：内容编辑区，每个章节可独立生成/编辑</li>
+<li><strong>AI 生成</strong>：点击章节旁的”生成”按钮，AI
+将结合知识库生成内容</li>
+<li><strong>反馈机制</strong>：对每段 AI 内容可选择 ✅ 采纳 / ✏️ 修改 /
+❌ 拒绝</li>
+</ul>
+<h3 id="知识库library">3.3 知识库（Library）</h3>
+<p>路径：侧边栏 → <strong>知识库</strong></p>
+<ul>
+<li><strong>上传文档</strong>：支持 PDF/DOCX/TXT
+格式，系统自动向量化切片</li>
+<li><strong>搜索</strong>：输入关键词语义检索相关知识片段</li>
+<li><strong>统计</strong>：查看总切片数、文件数、结构化表格数</li>
+</ul>
+<h3 id="工艺图谱craft-library">3.4 工艺图谱（Craft Library）</h3>
+<p>路径：侧边栏 → <strong>工艺图谱</strong></p>
+<ul>
+<li>内置市政道路 + 房建 248 个工艺节点</li>
+<li>按工程类型筛选查看标准施工工艺</li>
+<li>AI 生成章节时自动引用匹配的工艺方案</li>
+</ul>
+<h3 id="ai-对话">3.5 AI 对话</h3>
+<p>路径：侧边栏 → <strong>AI 对话</strong></p>
+<ul>
+<li>输入任何标书编制相关问题</li>
+<li>AI 实时流式回复，支持多轮对话</li>
+<li>可询问评分标准、施工方案要点、投标策略等</li>
+</ul>
+<h3 id="变体引擎variants">3.6 变体引擎（Variants）</h3>
+<p>路径：侧边栏 → <strong>变体引擎</strong></p>
+<ul>
+<li>输入标书原文，设置生成数量</li>
+<li>AI 自动进行同义替换、句式重组、段落重排</li>
+<li>每份变体的相似度控制在 4%-18% 区间</li>
+</ul>
+<h3 id="反审标检测anti-review">3.7 反审标检测（Anti-Review）</h3>
+<p>路径：侧边栏 → <strong>反审标</strong></p>
+<ul>
+<li>粘贴待检测文本或选择章节</li>
+<li>系统进行两级检测：
+<ul>
+<li><strong>L1
+统计检测</strong>：句长分布、词汇丰富度、重复率、连接词密度</li>
+<li><strong>L2 基线对比</strong>：与 AI 生成基线的相似度评分</li>
+</ul></li>
+<li>返回风险等级（低/中/高/严重）和优化建议</li>
+</ul>
+<h3 id="导出">3.8 导出</h3>
+<ul>
+<li>在工作区完成编辑后，点击”导出 Word”</li>
+<li>系统生成格式规范的 .docx 文件自动下载</li>
+</ul>
+<hr />
+<h2 id="四系统架构">四、系统架构</h2>
+<pre><code>前端 (Next.js 16) ← JWT → 后端 (FastAPI)
+                              ↓
+                    PostgreSQL + pgvector
+                              ↓
+                    Gemini 1.5 Flash (LLM)</code></pre>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>技术栈</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>前端</td>
+<td>Next.js 16 + TypeScript + Tailwind v4</td>
+</tr>
+<tr>
+<td>后端</td>
+<td>FastAPI + Python 3.14</td>
+</tr>
+<tr>
+<td>数据库</td>
+<td>PostgreSQL + pgvector 向量检索</td>
+</tr>
+<tr>
+<td>AI 引擎</td>
+<td>Gemini 1.5 Flash / Pro</td>
+</tr>
+<tr>
+<td>认证</td>
+<td>JWT Token (Bearer)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="五环境配置">五、环境配置</h2>
+<h3 id="后端-.env">5.1 后端 <code>.env</code></h3>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="va">DATABASE_URL</span><span class="op">=</span>postgresql+asyncpg://user:pass@localhost:5434/biaobiao</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="va">JWT_SECRET_KEY</span><span class="op">=</span>your-strong-random-secret-key</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="va">CORS_ORIGINS</span><span class="op">=</span>http://localhost:3000,http://localhost:3001</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="va">GOOGLE_API_KEY</span><span class="op">=</span>your-gemini-api-key</span></code></pre></div>
+<h3 id="启动命令">5.2 启动命令</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 后端</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> backend <span class="kw">&amp;&amp;</span> <span class="ex">python3</span> <span class="at">-m</span> uvicorn app.main:app <span class="at">--host</span> 127.0.0.1 <span class="at">--port</span> 8001 <span class="at">--reload</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 前端</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> frontend <span class="kw">&amp;&amp;</span> <span class="ex">npm</span> run dev</span></code></pre></div>
+<hr />
+<h2 id="六常见问题">六、常见问题</h2>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>解决</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>登录后白屏</td>
+<td>检查 <code>NEXT_PUBLIC_API_BASE</code> 是否指向后端</td>
+</tr>
+<tr>
+<td>AI 生成无响应</td>
+<td>确认 <code>GOOGLE_API_KEY</code> 配置正确</td>
+</tr>
+<tr>
+<td>知识库上传失败</td>
+<td>检查文件格式（仅支持 PDF/DOCX/TXT）</td>
+</tr>
+<tr>
+<td>导出 Word 报错</td>
+<td>确认后端已安装 <code>python-docx</code> 依赖</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>

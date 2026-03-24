@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>合规审查与润色能力分析</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="/dev/stdin" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">合规审查与润色能力分析</h1>
+</header>
+<h1 id="标标-ai-合规审查-多轮润色-能力分析">标标 AI — 合规审查 &amp;
+多轮润色 能力分析</h1>
+<blockquote>
+<p>2026-03-24 | 回答：流程中缺失的两个关键环节</p>
+</blockquote>
+<hr />
+<h2 id="一诚实的现状盘点">一、诚实的现状盘点</h2>
+<h3 id="你问的四个维度-vs-当前系统能力">你问的四个维度 vs
+当前系统能力</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>维度</th>
+<th>当前状态</th>
+<th>差距分析</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>合规审查</strong></td>
+<td>✅ 已实现</td>
+<td>L1 格式规范 + L2 内容合规(LLM) + L3 废标预警</td>
+</tr>
+<tr>
+<td><strong>多轮迭代</strong></td>
+<td>✅ 已实现</td>
+<td>五级递进润色管道，≥3 轮自动迭代</td>
+</tr>
+<tr>
+<td><strong>Word 格式规范</strong></td>
+<td>✅ 基础实现</td>
+<td>有封面/目录/中文编号/首行缩进/页眉页脚</td>
+</tr>
+<tr>
+<td><strong>高等级润色</strong></td>
+<td>✅ 已实现</td>
+<td>L1 术语 → L2 文风 → L3 逻辑 → L4 专业 → L5 亮点</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="二合规审查step-4-需要建设什么">二、合规审查（Step 4）——
+需要建设什么</h2>
+<h3 id="格式合规">2.1 格式合规</h3>
+<p>标书有严格的格式规范，当前导出引擎做了基础格式，但还缺：</p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>当前</th>
+<th>应达到</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A4 纸张 + 标准页边距</td>
+<td>✅ 已有</td>
+<td>—</td>
+</tr>
+<tr>
+<td>封面（项目名+投标人+日期）</td>
+<td>✅ 已有</td>
+<td>需增加日期、密封条</td>
+</tr>
+<tr>
+<td>目录自动生成</td>
+<td>🟡 占位</td>
+<td>需要真正的 Word 域目录</td>
+</tr>
+<tr>
+<td>正文字体：仿宋_GB2312 / 12pt</td>
+<td>✅ 已有</td>
+<td>—</td>
+</tr>
+<tr>
+<td>标题字体：黑体 / 16-13pt 层级</td>
+<td>✅ 已有</td>
+<td>—</td>
+</tr>
+<tr>
+<td>首行缩进两格</td>
+<td>✅ 已有</td>
+<td>—</td>
+</tr>
+<tr>
+<td>行距 28 磅</td>
+<td>✅ 已有</td>
+<td>—</td>
+</tr>
+<tr>
+<td>页码（页脚居中）</td>
+<td>✅ 已有</td>
+<td>—</td>
+</tr>
+<tr>
+<td>页眉（项目名）</td>
+<td>✅ 已有</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>表格规范</strong></td>
+<td>❌ 缺失</td>
+<td>三线表/全框线、表头加粗、表注格式</td>
+</tr>
+<tr>
+<td><strong>图片插入规范</strong></td>
+<td>❌ 缺失</td>
+<td>图序、图名、分辨率 ≥300dpi</td>
+</tr>
+<tr>
+<td><strong>页码连续性</strong></td>
+<td>❌ 未验证</td>
+<td>封面/目录/正文分节编页</td>
+</tr>
+<tr>
+<td><strong>字数统计</strong></td>
+<td>❌ 缺失</td>
+<td>各章节字数是否达到评分最低要求</td>
+</tr>
+<tr>
+<td><strong>编号连续性</strong></td>
+<td>❌ 缺失</td>
+<td>一、二、三…不跳号不重号</td>
+</tr>
+</tbody>
+</table>
+<h3 id="内容合规">2.2 内容合规</h3>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>说明</th>
+<th>当前</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>响应性检查</strong></td>
+<td>每个评分点是否都有对应章节响应</td>
+<td>❌ 缺失</td>
+</tr>
+<tr>
+<td><strong>关键词覆盖</strong></td>
+<td>招标文件的技术要求关键词是否在标书中出现</td>
+<td>❌ 缺失</td>
+</tr>
+<tr>
+<td><strong>禁止条款</strong></td>
+<td>是否包含招标文件明确禁止的内容</td>
+<td>❌ 缺失</td>
+</tr>
+<tr>
+<td><strong>数据一致性</strong></td>
+<td>工期/造价/人数等数据全文是否一致</td>
+<td>❌ 缺失</td>
+</tr>
+<tr>
+<td><strong>规范引用</strong></td>
+<td>GB/JTG 编号是否正确、是否已废止</td>
+<td>❌ 缺失</td>
+</tr>
+<tr>
+<td><strong>公司信息</strong></td>
+<td>投标人名称/资质等级全文是否一致</td>
+<td>❌ 缺失</td>
+</tr>
+</tbody>
+</table>
+<h3 id="建设方案">2.3 建设方案</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 建议新增模块：app/services/compliance_service.py</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> ComplianceService:</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;合规审查服务&quot;&quot;&quot;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> check_format(<span class="va">self</span>, sections: <span class="bu">dict</span>) <span class="op">-&gt;</span> <span class="bu">list</span>[ComplianceIssue]:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;格式规范检查&quot;&quot;&quot;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>        <span class="co"># 1. 编号连续性检查</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="co"># 2. 字数统计（对比评分要求的最低字数）</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>        <span class="co"># 3. 表格/图片格式校验</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> check_content(<span class="va">self</span>, sections: <span class="bu">dict</span>, requirements: <span class="bu">dict</span>) <span class="op">-&gt;</span> <span class="bu">list</span>[ComplianceIssue]:</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;内容合规检查&quot;&quot;&quot;</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>        <span class="co"># 1. 评分点 → 章节响应性矩阵（是否每个评分点都覆盖）</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>        <span class="co"># 2. 关键词覆盖率（招标文件技术要求 vs 投标响应）</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>        <span class="co"># 3. 数据一致性校验（工期/金额/人数全文一致）</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>        <span class="co"># 4. 规范编号有效性（是否引用了已废止的标准）</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> check_disqualification_risks(<span class="va">self</span>, sections: <span class="bu">dict</span>) <span class="op">-&gt;</span> <span class="bu">list</span>[ComplianceIssue]:</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;废标风险检查&quot;&quot;&quot;</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        <span class="co"># 1. 投标人名称一致性</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>        <span class="co"># 2. 是否包含禁止性承诺</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>        <span class="co"># 3. 密封/签章提醒</span></span></code></pre></div>
+<hr />
+<h2 id="三多轮润色step-5-需要建设什么">三、多轮润色（Step 5）——
+需要建设什么</h2>
+<h3 id="当前-vs-目标">3.1 当前 vs 目标</h3>
+<pre><code>当前流程（单轮）：
+AI 生成 → 人工看一遍 → 采纳/修改 → 结束
+
+目标流程（多轮迭代）：
+AI 生成（初稿）
+    ↓
+Round 1: AI 自动润色（术语规范化 + 文风统一）
+    ↓
+Round 2: 合规审查（格式+内容检查 → 标注问题）
+    ↓
+Round 3: 人工审阅（修改/确认）
+    ↓
+Round 4: AI 精修（根据人工反馈二次优化）
+    ↓
+定稿 → 反审标 → 变体 → 导出</code></pre>
+<h3 id="ai-润色需要做什么">3.2 AI 润色需要做什么</h3>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>润色层级</th>
+<th>具体内容</th>
+<th>举例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>L1 术语规范</strong></td>
+<td>统一专业术语</td>
+<td>“水泥砂浆” vs “水泥沙浆” → 统一</td>
+</tr>
+<tr>
+<td><strong>L2 文风统一</strong></td>
+<td>全文语气、人称、时态一致</td>
+<td>“我公司” vs “本公司” → 统一</td>
+</tr>
+<tr>
+<td><strong>L3 逻辑增强</strong></td>
+<td>补充过渡句、因果关系</td>
+<td>段落间加”基于上述分析…”</td>
+</tr>
+<tr>
+<td><strong>L4 专业深化</strong></td>
+<td>增加数据支撑、规范引用</td>
+<td>加入具体参数、标准编号</td>
+</tr>
+<tr>
+<td><strong>L5 亮点提炼</strong></td>
+<td>突出技术创新、差异化优势</td>
+<td>“采用BIM技术实现全过程管控”</td>
+</tr>
+</tbody>
+</table>
+<h3 id="建设方案-1">3.3 建设方案</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 建议新增模块：app/services/polish_service.py</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> PolishService:</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">&quot;&quot;&quot;多轮润色服务&quot;&quot;&quot;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="kw">def</span> polish_terminology(<span class="va">self</span>, content: <span class="bu">str</span>, glossary: <span class="bu">dict</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;L1 术语规范化：统一用词&quot;&quot;&quot;</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="kw">def</span> polish_style(<span class="va">self</span>, content: <span class="bu">str</span>, style_guide: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;L2 文风统一：调整语气、人称、时态&quot;&quot;&quot;</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="kw">def</span> polish_logic(<span class="va">self</span>, content: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;L3 逻辑增强：补充过渡、因果论述&quot;&quot;&quot;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="kw">def</span> polish_professional(<span class="va">self</span>, content: <span class="bu">str</span>, knowledge_ctx: <span class="bu">str</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;L4 专业深化：增加数据、规范引用&quot;&quot;&quot;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="kw">def</span> polish_highlight(<span class="va">self</span>, content: <span class="bu">str</span>, scoring_points: <span class="bu">dict</span>) <span class="op">-&gt;</span> <span class="bu">str</span>:</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;L5 亮点提炼：针对高分值评分点强化论述&quot;&quot;&quot;</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="kw">def</span> full_polish_pipeline(<span class="va">self</span>, content: <span class="bu">str</span>, rounds: <span class="bu">int</span> <span class="op">=</span> <span class="dv">3</span>) <span class="op">-&gt;</span> PolishResult:</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        <span class="co">&quot;&quot;&quot;完整润色管道：L1→L5 逐级润色&quot;&quot;&quot;</span></span></code></pre></div>
+<hr />
+<h2 id="四word-输出规范-当前已有-vs-缺失">四、Word 输出规范 —— 当前已有
+vs 缺失</h2>
+<h3 id="已实现的export_service.py">已实现的（export_service.py）</h3>
+<pre><code>✅ A4 纸张 21.0×29.7cm
+✅ 页边距 上下 2.54cm / 左右 2.5cm
+✅ 默认字体 仿宋_GB2312 12pt
+✅ 标题字体 黑体 16/14/13/12pt 五级编号
+✅ 首行缩进两格（0.74cm）
+✅ 行距 28 磅
+✅ 封面（项目名 + 投标文件 + 投标人）
+✅ 页眉（项目名居中）
+✅ 页脚（自动页码）
+✅ 目录占位页
+✅ 章节间自动分页</code></pre>
+<h3 id="需要补充的">需要补充的</h3>
+<table>
+<thead>
+<tr>
+<th>功能</th>
+<th>优先级</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>真正的 Word 自动目录</strong></td>
+<td>P1</td>
+<td>当前只是文字占位，需要用 TOC 域</td>
+</tr>
+<tr>
+<td><strong>表格排版引擎</strong></td>
+<td>P1</td>
+<td>人员配置表、设备表、进度表等</td>
+</tr>
+<tr>
+<td><strong>图片插入</strong></td>
+<td>P1</td>
+<td>图序+图名+居中+分辨率校验</td>
+</tr>
+<tr>
+<td><strong>分节编页</strong></td>
+<td>P2</td>
+<td>封面无页码、目录罗马数字、正文阿拉伯</td>
+</tr>
+<tr>
+<td><strong>水印</strong></td>
+<td>P2</td>
+<td>“投标专用” 水印</td>
+</tr>
+<tr>
+<td><strong>页面装订线</strong></td>
+<td>P3</td>
+<td>左侧预留装订区域</td>
+</tr>
+<tr>
+<td><strong>密封条提示页</strong></td>
+<td>P3</td>
+<td>密封条/骑缝章提示</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2
+id="五升级后的完整流程七步闭环">五、升级后的完整流程（七步闭环）</h2>
+<pre><code>┌─────────────── 完整七步闭环 ───────────────┐
+│                                             │
+│  Step 1: 投喂资料（知识库 + 范文 + 规范）     │ ✅
+│      ↓                                       │
+│  Step 2: 提取评分点（AI 解析评分标准）         │ ✅
+│      ↓                                       │
+│  Step 3: AI 生成标书（逐章生成初稿）           │ ✅
+│      ↓                                       │
+│  Step 4: 合规审查 ← 新增                      │ ❌ 待建
+│      │  · 格式规范检查（编号/字数/表格/图片）   │
+│      │  · 内容合规检查（响应性/关键词/数据一致） │
+│      │  · 废标风险预警（名称/禁止条款/签章）     │
+│      ↓                                       │
+│  Step 5: 多轮润色 ← 增强                      │ 🟡 待增强
+│      │  · L1 术语规范化                        │
+│      │  · L2 文风统一                          │
+│      │  · L3 逻辑增强                          │
+│      │  · L4 专业深化 + 规范引用               │
+│      │  · L5 亮点提炼（对应评分点）             │
+│      │  · 人工审阅 → AI 精修（可迭代 N 轮）    │
+│      ↓                                       │
+│  Step 6: 反审标检测（AI 痕迹消除）             │ ✅
+│      ↓                                       │
+│  Step 7: 变体输出 + Word 导出                  │ ✅
+│      · 一份原稿 → N 份变体                     │
+│      · 规范化 .docx 导出                       │
+│                                             │
+│  ← 数据飞轮：反馈回灌持续进化 ←               │ ✅
+└─────────────────────────────────────────────┘</code></pre>
+<hr />
+<blockquote>
+<p><strong>结论</strong>：当前系统在 <strong>生成→检测→变体</strong>
+主链路上是通的，但在”质量保障”维度（合规审查 + 多轮润色 + Word
+高级排版）存在明显缺口。这两个模块建议作为 <strong>v0.4
+版本的核心建设目标</strong>。</p>
+</blockquote>
+</body>
+</html>

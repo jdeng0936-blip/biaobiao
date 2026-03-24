@@ -155,7 +155,6 @@ class TestFeedbackRequest(unittest.TestCase):
             original_text="AI 生成内容",
         )
         self.assertEqual(req.action, "accept")
-        self.assertEqual(req.tenant_id, "default")
 
     def test_valid_edit(self):
         from app.api.v1.feedback import FeedbackRequest

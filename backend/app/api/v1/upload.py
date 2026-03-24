@@ -6,15 +6,14 @@ import os
 import tempfile
 import logging
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from pydantic import BaseModel
+
+from app.core.deps import get_tenant_id
 
 logger = logging.getLogger("upload_api")
 
 router = APIRouter(prefix="/api/v1/upload", tags=["文件上传"])
-
-# 临时 tenant_id（正式环境从 JWT 中提取）
-DEMO_TENANT = "demo_tenant"
 
 # 允许的文件类型
 ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
@@ -23,7 +22,10 @@ MAX_FILE_SIZE = 50 * 1024 * 1024
 
 
 @router.post("/document")
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(
+    file: UploadFile = File(...),
+    tenant_id: str = Depends(get_tenant_id),
+):
     """
     📤 上传招标/标书文件
 
@@ -55,11 +57,15 @@ async def upload_document(file: UploadFile = File(...)):
         tmp_path = tmp.name
 
     try:
-        # 导入管线（懒加载避免循环依赖）
-        import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'scripts'))
-
-        from scripts.chunking_pipeline import ChunkingPipeline
+        # 动态加载 scripts/chunking_pipeline.py（不污染 sys.path）
+        import importlib.util
+        _script_path = os.path.join(
+            os.path.dirname(__file__), '..', '..', '..', 'scripts', 'chunking_pipeline.py'
+        )
+        _spec = importlib.util.spec_from_file_location("chunking_pipeline", _script_path)
+        _module = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_module)
+        ChunkingPipeline = _module.ChunkingPipeline
 
         db_url = os.getenv(
             "DATABASE_URL",
@@ -73,7 +79,7 @@ async def upload_document(file: UploadFile = File(...)):
             vectorize=True,
             engine="gemini",
             db_url=db_url,
-            tenant_id=DEMO_TENANT,
+            tenant_id=tenant_id,
         )
 
         chunks = pipeline.process_file(tmp_path)

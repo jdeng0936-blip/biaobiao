@@ -1,22 +1,13 @@
 """
 反 AI 阅标审查 API 路由
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
+from app.core.deps import get_tenant_id
 from app.services.anti_review_service import AntiReviewService
 
 router = APIRouter(prefix="/api/v1/anti-review", tags=["反AI审查"])
-
-# 服务单例
-_service: AntiReviewService | None = None
-
-
-def get_service() -> AntiReviewService:
-    global _service
-    if _service is None:
-        _service = AntiReviewService()
-    return _service
 
 
 # ============================================================
@@ -46,14 +37,17 @@ class ReviewResponse(BaseModel):
 # API 端点
 # ============================================================
 @router.post("/check", response_model=ReviewResponse)
-async def check_text(req: ReviewRequest):
+async def check_text(
+    req: ReviewRequest,
+    tenant_id: str = Depends(get_tenant_id),
+):
     """
     🔍 AI 痕迹检测
 
     对单段文本进行 L1 统计特征 + L2 语料基线双层检测，
     返回风险分数（0-100）和改写建议。
     """
-    service = get_service()
+    service = AntiReviewService()
     try:
         result = service.review(req.text, req.section_title)
         return ReviewResponse(
@@ -68,7 +62,10 @@ async def check_text(req: ReviewRequest):
 
 
 @router.post("/batch", response_model=list[ReviewResponse])
-async def batch_check(req: BatchReviewRequest):
+async def batch_check(
+    req: BatchReviewRequest,
+    tenant_id: str = Depends(get_tenant_id),
+):
     """
     📋 批量 AI 痕迹检测
 
@@ -77,7 +74,7 @@ async def batch_check(req: BatchReviewRequest):
     if not req.sections:
         raise HTTPException(status_code=400, detail="章节内容不能为空")
 
-    service = get_service()
+    service = AntiReviewService()
     try:
         results = service.review_sections(req.sections)
         return [

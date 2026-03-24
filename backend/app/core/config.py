@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
 
+    # ---- CORS ----
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001"
+
     # ---- LangFuse ----
     LANGFUSE_PUBLIC_KEY: Optional[str] = None
     LANGFUSE_SECRET_KEY: Optional[str] = None

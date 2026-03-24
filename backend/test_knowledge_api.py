@@ -163,11 +163,11 @@ class TestServiceTenantInjection(unittest.TestCase):
         svc.tenant_id = "demo_tenant"
         self.assertEqual(svc.tenant_id, "demo_tenant")
 
-    def test_demo_tenant_constant(self):
-        """路由层 DEMO_TENANT 一致"""
-        from app.api.v1.knowledge import DEMO_TENANT as k_tenant
-        from app.api.v1.generate import DEMO_TENANT as g_tenant
-        self.assertEqual(k_tenant, g_tenant)
+    def test_tenant_id_via_jwt_dependency(self):
+        """路由层 tenant_id 通过 Depends(get_tenant_id) 从 JWT 注入"""
+        from app.core.deps import get_tenant_id
+        # 验证依赖函数存在且可调用
+        self.assertTrue(callable(get_tenant_id))
 
 
 if __name__ == "__main__":

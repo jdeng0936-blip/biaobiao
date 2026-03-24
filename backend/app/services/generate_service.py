@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional, AsyncGenerator
 
 from app.llm.llm_selector import get_llm_selector
+from app.llm.prompt_loader import get_prompt
 from app.services.desensitize_service import DesensitizeGateway
 
 logger = logging.getLogger("generate_service")
@@ -85,50 +86,19 @@ class BidGenerateService:
 
     def build_system_prompt(self, project_type: str = "") -> str:
         """构建系统 Prompt — 标书专家角色 + 行业词库注入"""
-        # 基础角色和能力
-        base = """你是一位资深的标书编写专家，拥有 15 年中国市政/房建工程招投标经验。
-
-## 核心能力
-- 精通施工组织设计、技术方案、质量管理、安全文明施工等全部标书模块
-- 熟悉最新国标、行标和地方标准
-- 擅长将技术细节转化为评审加分亮点"""
-
         # 行业词库注入
         industry = self.get_industry_context(project_type)
         industry_section = ""
         if industry:
             keywords = "、".join(industry.get("core_keywords", [])[:10])
             standards = "\n".join(f"  - {s}" for s in industry.get("standards", [])[:3])
-            industry_section = f"""
+            industry_section = (
+                f"\n\n## 本项目行业领域：{industry.get('label', project_type)}\n"
+                f"### 你必须熟练运用的行业核心术语\n{keywords}\n"
+                f"### 本项目适用的关键规范标准\n{standards}"
+            )
 
-## 本项目行业领域：{industry.get('label', project_type)}
-### 你必须熟练运用的行业核心术语
-{keywords}
-### 本项目适用的关键规范标准
-{standards}"""
-
-        # 写作规范
-        rules = """
-
-## 写作规范
-1. 使用专业工程术语，确保符合行业规范
-2. 内容必须具体、量化（如"每 50m 设一处"），拒绝空话套话
-3. 引用规范时注明规范编号（如 GB50300-2013）
-4. 针对不同工程类型自动适配专业表达
-5. 文段之间保持逻辑递进关系
-6. 适当使用分项、分点，便于评审阅读
-
-## 输出格式（极其重要，必须严格遵守）
-- 直接输出标书正文
-- 绝对禁止使用 Markdown 语法：不允许出现 #、##、###、*、**、```、> 等任何Markdown标记
-- 章节标题使用中文编号格式，例如："一、""二、""（一）""（二）""1.""2.""（1）""（2）"
-- 段落之间用空行分隔
-- 段落开头空两格（缩进两个汉字）
-- 列举项目使用中文序号：（1）（2）（3）或 ① ② ③
-- 重要数据直接写入正文，不要加任何装饰符号
-- 整体风格必须像正式打印的标书文档，而非网络文章"""
-
-        return base + industry_section + rules
+        return get_prompt("bid_generate_system", industry_section=industry_section)
 
     @staticmethod
     def _parse_json(text: str) -> dict:
@@ -149,8 +119,13 @@ class BidGenerateService:
             return {}
 
     async def _run_planner(self, section_title: str, project_context: str, user_requirements: str) -> dict:
-        sys_prompt = "你是一个高级标书规划规划师。必须且只能输出合法的 JSON 对象。格式限制：{\"outline\": \"大纲建议文字\", \"queries\": [\"如果需要补充知识库可以填入一些工程短语作为搜素关键词\"]}"
-        prompt = f"针对即将编写的【{section_title}】章节制定计划纲要。\n项目背景：{project_context}\n特殊要求：{user_requirements}\n请规划内容大纲并提取可能需要额外查阅的知识点（不超过2个关键词）。"
+        sys_prompt = get_prompt("planner")
+        prompt = get_prompt(
+            "planner_user",
+            section_title=section_title,
+            project_context=project_context,
+            user_requirements=user_requirements,
+        )
         try:
             res = await self.selector.generate("bid_generate", sys_prompt, prompt)
             return self._parse_json(res.text)
@@ -162,12 +137,16 @@ class BidGenerateService:
         if not scoring_points:
             # 没提供打分表，直接让过
             return {"passed": True, "feedbacks": []}
-            
-        sys_prompt = "你是一个铁面无私的评标专家考官。必须且只能输出纯 JSON 对象。格式边界：{\"passed\": true或false, \"feedbacks\": [\"如果不通过，列出缺失漏写的评分点批评或Markdown滥用问题\"]}"
-        punkte = ""
+
+        sys_prompt = get_prompt("reviewer")
+        scoring_points_text = ""
         for i, p in enumerate(scoring_points, 1):
-            punkte += f"{i}. {p}\n"
-        prompt = f"【本章节需要遵守的评标专家打分硬指标】：\n{punkte}\n\n【被审核初稿（部分）】：\n{draft[:1500]}\n\n请审核初稿是否精确且全面地覆盖了所有评分点并且没有使用Markdown。如果缺少任何一项则判定为未通过(passed:false)。"
+            scoring_points_text += f"{i}. {p}\n"
+        prompt = get_prompt(
+            "reviewer_user",
+            scoring_points_text=scoring_points_text,
+            draft_preview=draft[:1500],
+        )
         try:
             res = await self.selector.generate("bid_generate", sys_prompt, prompt)
             return self._parse_json(res.text)
@@ -247,22 +226,19 @@ class BidGenerateService:
             if matched:
                 insight_section = f"\n\n## 专家得分策略（来源: {matched[0].get('source', '行业数据')}\uff09\n{matched[0]['insight']}"
 
-        return f"""## 任务
-为你提供以下标书的资料，写出专业、完整的标书内容。
-
-## 章节与环境信息
-- 章节标题: {section_title}
-- 内容类型: {section_type}
-- 项目要求背景: {project_context}
-{knowledge_context}{industry_hints}{insight_section}{scoring_section}{user_req_section}{planner_section}{review_section}
-
-## 格式基座纪律要求（严禁逾越）：
-1. 绝对禁止使用任何 Markdown 语法（#、*、**、```、-、> 等全部禁止），保持公文平滑感。
-2. 章节标题用中文编号：一、二、三、（一）（二）、1. 2. 3.
-3. 每个段落首行不空两格（让前端或后期docx工具去做），但段间可以适度留空行。
-4. 如需溯源标注（引用知识库时），在段落末尾附加上 [REF:x]。
-
-请综合以上约束与要求，给出可以直接被拷贝作为最终标书文件的纯文本内容："""
+        return get_prompt(
+            "bid_generate_user",
+            section_title=section_title,
+            section_type=section_type,
+            project_context=project_context,
+            knowledge_context=knowledge_context,
+            industry_hints=industry_hints,
+            insight_section=insight_section,
+            scoring_section=scoring_section,
+            user_req_section=user_req_section,
+            planner_section=planner_section,
+            review_section=review_section,
+        )
 
 
     async def generate_stream(
@@ -275,48 +251,69 @@ class BidGenerateService:
         user_requirements: str = None,
         scoring_points: list[str] = None,
     ) -> AsyncGenerator[str, None]:
-        """流式生成标书内容 — 完全由微型状态机重构 (Agent Flow)"""
+        """流式生成标书内容 — 七节点智能管线（企业级）
+
+        Node 1: Planner     — 大纲规划
+        Node 2: Retriever   — RAG 检索增强
+        Node 3: Writer      — 初稿生成/重写
+        Node 4: ComplianceGate — 合规审查（格式+内容+废标预警）
+        Node 5: PolishPipeline — 多轮润色（术语→文风→逻辑→专业→亮点）
+        Node 6: Reviewer    — 终审评分
+        Node 7: Formatter   — 格式化输出
+        """
         if not self.ready:
             yield "data: " + json.dumps({"error": "LLM 服务未就绪"}, ensure_ascii=False) + "\n\n"
             return
             
         import asyncio
+        from app.services.compliance_service import ComplianceService, ComplianceContext
+        from app.services.polish_service import PolishService, PolishContext
+
         state = {
             "iteration": 0,
-            "max_iter": 2,
+            "max_iter": 3,          # 升级为 3 轮最大迭代
             "draft": "",
             "review_feedbacks": [],
+            "compliance_feedbacks": [],
             "chunks": rag_chunks or [],
-            "outline": ""
+            "outline": "",
         }
 
+        # 初始化合规审查和润色服务
+        compliance_service = ComplianceService(tenant_id=self._tenant_id)
+        polish_service = PolishService(tenant_id=self._tenant_id)
+
         try:
-            # === Node 1: Planner ===
-            yield "data: " + json.dumps({"type": "status", "text": "📝 [多智能体管线 启动] - 节点 1: 专家开始构思文档结构规划..."}, ensure_ascii=False) + "\n\n"
+            # === Node 1: Planner（大纲规划）===
+            yield "data: " + json.dumps({"type": "status", "text": "📝 [七节点管线 · 启动] Node 1/7: 专家构思文档结构规划..."}, ensure_ascii=False) + "\n\n"
             plan_res = await self._run_planner(section_title, project_context, str(user_requirements))
             state["outline"] = plan_res.get("outline", "")
             queries = plan_res.get("queries", [])
             
-            # === Node 2: Retriever ===
+            # === Node 2: Retriever（RAG 检索增强）===
             if queries:
-                yield "data: " + json.dumps({"type": "status", "text": f"🔍 [多智能体管线 追加] - 节点 2: 发现认知盲区，底层探针主动追检 {len(queries)} 项额外短语..."}, ensure_ascii=False) + "\n\n"
+                yield "data: " + json.dumps({"type": "status", "text": f"🔍 [七节点管线] Node 2/7: 知识探针追检 {len(queries)} 项补充知识..."}, ensure_ascii=False) + "\n\n"
                 from app.services.knowledge_service import KnowledgeService
                 try:
                     ks = KnowledgeService(self._tenant_id)
                     for q in queries:
-                        extra = ks.search_semantic(query_embedding=[0]*768, top_k=1, tenant_id=self._tenant_id) # 这里使用兜底零向量因为没有直接可提取的纯文本倒排索引,或者假设项目包含更底层查询。作为Demo使用防崩
-                        # 妥协版：调用 search_structured
                         extra_struc = ks.search_structured(query_text=q, tenant_id=self._tenant_id, top_k=1)
                         state["chunks"].extend(extra_struc)
                 except Exception as e:
                     logger.warning(f"Retriever 补充查询跳过: {e}")
 
-            # === Loop Node: Writer -> Reviewer ===
+            # === Loop: Writer → ComplianceGate → PolishPipeline → Reviewer ===
             while state["iteration"] < state["max_iter"]:
-                iter_text = f" （第 {state['iteration'] + 1} 次深度修撰重试）" if state["iteration"] > 0 else " 执笔者撰稿"
-                yield "data: " + json.dumps({"type": "status", "text": f"✍️ [多智能体管线 输出] - 节点 3:{iter_text} 开始撰写..."}, ensure_ascii=False) + "\n\n"
+                iter_num = state["iteration"] + 1
+                is_retry = state["iteration"] > 0
+
+                # --- Node 3: Writer（生成/重写）---
+                retry_text = f"（第 {iter_num} 轮修撰重试）" if is_retry else "初稿撰写"
+                yield "data: " + json.dumps({"type": "status", "text": f"✍️ [七节点管线] Node 3/7: {retry_text}..."}, ensure_ascii=False) + "\n\n"
                 
-                # 构造包含状态机的动态强化 Prompt
+                # 合并合规反馈和审查反馈
+                combined_feedbacks = state.get("compliance_feedbacks", []) + state.get("review_feedbacks", [])
+                
                 system_prompt = self.build_system_prompt(project_type=project_type)
                 user_prompt = self.build_rag_prompt(
                     section_title=section_title,
@@ -326,28 +323,97 @@ class BidGenerateService:
                     user_requirements=user_requirements,
                     scoring_points=scoring_points,
                     planner_outline=state["outline"],
-                    review_feedbacks=state["review_feedbacks"] if state["iteration"] > 0 else None,
+                    review_feedbacks=combined_feedbacks if is_retry else None,
                     project_type=project_type,
                 )
                 
                 masked_prompt, mapping = self.desensitizer.mask(user_prompt)
-                
-                # 开始写稿，一次性生成完毕存放内存
                 writer_res = await self.selector.generate("bid_generate", system_prompt, masked_prompt)
                 unmasked_draft = self.desensitizer.unmask(writer_res.text, mapping)
                 state["draft"] = unmasked_draft
+
+                # --- Node 4: ComplianceGate（合规审查）---
+                yield "data: " + json.dumps({"type": "status", "text": f"🛡️ [七节点管线] Node 4/7: 三级合规审查（格式+内容+废标预警）..."}, ensure_ascii=False) + "\n\n"
                 
-                # --- Node 4: Reviewer ---
-                yield "data: " + json.dumps({"type": "status", "text": f"⚖️ [多智能体管线 审查] - 节点 4: 评标机器人对初步文本进行苛刻质量巡视..."}, ensure_ascii=False) + "\n\n"
+                compliance_ctx = ComplianceContext(
+                    project_type=project_type,
+                    scoring_points=scoring_points or [],
+                )
+                compliance_result = await compliance_service.check(state["draft"], compliance_ctx)
+                
+                if compliance_result.has_critical and state["iteration"] < state["max_iter"] - 1:
+                    # 存在致命合规问题 → 带反馈重写
+                    state["compliance_feedbacks"] = compliance_result.to_feedback_list()
+                    state["review_feedbacks"] = []
+                    crit_count = len(compliance_result.critical_issues)
+                    yield "data: " + json.dumps({
+                        "type": "status", 
+                        "text": f"🚨 [合规审查] 发现 {crit_count} 个致命问题，触发退档重写！"
+                    }, ensure_ascii=False) + "\n\n"
+                    state["iteration"] += 1
+                    continue
+                elif compliance_result.issues:
+                    warn_count = len(compliance_result.warning_issues)
+                    yield "data: " + json.dumps({
+                        "type": "status",
+                        "text": f"⚠️ [合规审查] 合规分 {compliance_result.score:.0f}/100 | {compliance_result.summary}"
+                    }, ensure_ascii=False) + "\n\n"
+
+                # --- Node 5: PolishPipeline（多轮润色 — 至少 3 轮）---
+                yield "data: " + json.dumps({"type": "status", "text": "✨ [七节点管线] Node 5/7: 三轮递进式精修润色启动..."}, ensure_ascii=False) + "\n\n"
+
+                polish_ctx = PolishContext(
+                    project_type=project_type,
+                    section_title=section_title,
+                    section_type=section_type,
+                    scoring_points=scoring_points or [],
+                )
+
+                async def polish_status_cb(msg: str):
+                    """润色进度回调（非阻塞式记录）"""
+                    pass  # 润色管道内部日志，主流式由外层管控
+
+                try:
+                    polish_result = await polish_service.polish_pipeline(
+                        content=state["draft"],
+                        context=polish_ctx,
+                        min_rounds=3,
+                        max_rounds=5,
+                        status_callback=polish_status_cb,
+                    )
+
+                    if polish_result.final_content:
+                        state["draft"] = polish_result.final_content
+                        yield "data: " + json.dumps({
+                            "type": "status",
+                            "text": f"✅ [润色完成] {polish_result.summary}"
+                        }, ensure_ascii=False) + "\n\n"
+                    else:
+                        yield "data: " + json.dumps({
+                            "type": "status",
+                            "text": "⚠️ [润色] 润色管道未产生有效输出，使用原稿"
+                        }, ensure_ascii=False) + "\n\n"
+
+                except Exception as e:
+                    logger.warning(f"润色管道异常（降级使用原稿）: {e}")
+                    yield "data: " + json.dumps({
+                        "type": "status",
+                        "text": f"⚠️ [润色] 降级跳过: {str(e)[:50]}"
+                    }, ensure_ascii=False) + "\n\n"
+
+                # --- Node 6: Reviewer（终审评分）---
+                yield "data: " + json.dumps({"type": "status", "text": "⚖️ [七节点管线] Node 6/7: 评标专家终审质量巡检..."}, ensure_ascii=False) + "\n\n"
                 review_out = await self._run_reviewer(state["draft"], scoring_points or [])
                 passed = review_out.get("passed", True)
                 
                 if passed or state["iteration"] == state["max_iter"] - 1:
+                    # Node 7: Formatter（格式化输出）
                     if passed:
-                        yield "data: " + json.dumps({"type": "status", "text": "✅ 终核审查通过，开始数据推流至客户端。"}, ensure_ascii=False) + "\n\n"
+                        yield "data: " + json.dumps({"type": "status", "text": "✅ [七节点管线] Node 7/7: 终审通过 ✓ 开始数据推流..."}, ensure_ascii=False) + "\n\n"
                     else:
-                        yield "data: " + json.dumps({"type": "status", "text": "⚠️ 制式循环拉满，将强制向客户端进行释出。"}, ensure_ascii=False) + "\n\n"
-                    # 这里为了模拟打字机流式，把全量数据分割给前端
+                        yield "data: " + json.dumps({"type": "status", "text": f"⚠️ [七节点管线] Node 7/7: 第 {state['max_iter']} 轮已满，强制释出..."}, ensure_ascii=False) + "\n\n"
+
+                    # 流式推送（打字机效果）
                     for i in range(0, len(state["draft"]), 6):
                         chunk = state["draft"][i:i+6]
                         yield "data: " + json.dumps({"type": "content", "text": chunk}, ensure_ascii=False) + "\n\n"
@@ -357,14 +423,18 @@ class BidGenerateService:
                     # 被打回重造
                     feedbacks = review_out.get("feedbacks", ["未知格式或违规错误"])
                     state["review_feedbacks"] = feedbacks
+                    state["compliance_feedbacks"] = []
                     fault_text = feedbacks[0] if feedbacks else "格式越界"
-                    yield "data: " + json.dumps({"type": "status", "text": f"❌ 核查失败！专家意见[{fault_text[:15]}...] 正在请求指令打回退档重写！"}, ensure_ascii=False) + "\n\n"
+                    yield "data: " + json.dumps({
+                        "type": "status", 
+                        "text": f"❌ [终审退回] 专家意见[{fault_text[:20]}...] 触发第 {iter_num + 1} 轮修撰！"
+                    }, ensure_ascii=False) + "\n\n"
                     state["iteration"] += 1
 
             yield "data: " + json.dumps({"type": "done"}, ensure_ascii=False) + "\n\n"
 
         except Exception as e:
-            logger.error(f"多智能体生成核心失败: {e}")
+            logger.error(f"七节点管线核心失败: {e}")
             yield "data: " + json.dumps({
                 "type": "error",
                 "message": str(e),
@@ -376,24 +446,7 @@ class BidGenerateService:
 
     def build_chat_system_prompt(self) -> str:
         """Chat 对话专用 System Prompt — 标书咨询顾问角色"""
-        return """你是一位专业的标书咨询顾问，负责回答用户关于标书内容的具体问题。
-
-## 核心原则
-1. **精准回答**：只针对用户提出的具体问题回答，绝不复述或重新生成标书内容
-2. **简洁有力**：回答控制在 100-300 字以内，直击要点
-3. **专业判断**：如果问题涉及规范标准，直接给出是否合规的判断和依据
-4. **可操作建议**：给出具体的改进建议而非笼统的描述
-
-## 回答格式
-- 直接回答问题，不要以"好的"、"您好"等开头
-- 如有多个要点，用简短的编号列出
-- 如涉及规范引用，注明规范名称和编号
-- 回答末尾不要加总结性废话
-
-## 特别注意
-- 绝对不要重新生成或复述引用内容的原文
-- 不要展开回答用户没有问到的内容
-- 如果问题不够明确，直接给出最可能的解读并回答"""
+        return get_prompt("bid_chat_system")
 
     def build_chat_prompt(
         self,
@@ -413,17 +466,13 @@ class BidGenerateService:
             if rag_texts:
                 rag_section = "\n\n【相关参考】\n" + "\n".join(rag_texts)
 
-        return f"""【引用内容】
-{module_content[:500]}
-
-【用户问题】
-{user_question}
-
-【项目背景】
-{project_context}
-{rag_section}
-
-请直接回答用户的问题。只基于上方引用内容来作答，不要生成新的标书章节内容。"""
+        return get_prompt(
+            "bid_chat_user",
+            module_content=module_content[:500],
+            user_question=user_question,
+            project_context=project_context,
+            rag_section=rag_section,
+        )
 
     async def generate_chat_stream(
         self,
@@ -463,12 +512,11 @@ class BidGenerateService:
             # 引申提问（task_type = suggestions）
             suggestions = []
             try:
-                sug_prompt = f"""基于以下对话，生成 2-3 个与当前问题紧密相关的后续提问建议。
-
-用户问题：{user_question}
-AI 回答摘要：{full_text[:300]}
-
-要求：只输出一个 JSON 数组，格式为 ["问题1", "问题2", "问题3"]，不要输出其他任何内容。"""
+                sug_prompt = get_prompt(
+                    "suggestions",
+                    user_question=user_question,
+                    answer_summary=full_text[:300],
+                )
 
                 sug_response = await self.selector.generate("suggestions", "", sug_prompt)
                 if sug_response.text:

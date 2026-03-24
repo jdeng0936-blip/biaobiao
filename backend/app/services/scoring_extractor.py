@@ -17,6 +17,7 @@ from dataclasses import dataclass, field, asdict
 from typing import Optional
 
 from app.llm.llm_selector import get_llm_selector
+from app.llm.prompt_loader import get_prompt
 
 logger = logging.getLogger("scoring_extractor")
 
@@ -59,37 +60,12 @@ class ScoringExtractor:
         输入: 招标文件的评分标准部分（或全文，LLM 会自动定位）
         输出: 结构化的评分点 JSON
         """
-        system_prompt = """你是一位资深的招标文件分析专家。你的唯一任务是从招标文件中精确提取评分标准和评分细则。
+        system_prompt = get_prompt("bid_extract_system")
 
-输出规则：
-1. 只输出一个 JSON 对象，不要输出其他任何文字
-2. JSON 格式必须严格遵守下方 Schema
-3. 如果文档中没有明确的评分标准，根据标书类型推断常见评分维度"""
-
-        user_prompt = f"""请从以下招标文件内容中提取所有评分点。
-
-## 招标文件内容
-{bid_document_text[:8000]}
-
-## 输出 JSON Schema
-{{
-  "total_score": 100,
-  "categories": {{
-    "技术方案": 50,
-    "商务部分": 30,
-    "报价部分": 20
-  }},
-  "points": [
-    {{
-      "category": "技术方案",
-      "item": "施工组织方案",
-      "max_score": 15,
-      "requirements": "方案科学合理、措施可行，工期安排合理"
-    }}
-  ]
-}}
-
-请严格按上述 Schema 输出 JSON："""
+        user_prompt = get_prompt(
+            "bid_extract_user",
+            bid_document_text=bid_document_text[:8000],
+        )
 
         try:
             response = await self.selector.generate("bid_extract", system_prompt, user_prompt)
@@ -141,43 +117,14 @@ class ScoringExtractor:
         for p in scoring_result.points:
             points_summary += f"- [{p.category}] {p.item}（{p.max_score}分）: {p.requirements}\n"
 
-        system_prompt = """你是一位资深的标书结构设计专家。你的任务是根据评分标准设计投标文件的目录大纲。
+        system_prompt = get_prompt("bid_outline_system")
 
-核心原则：
-1. 每个评分点都必须在目录中有明确对应的章节
-2. 高分值评分点要分配更多篇幅和更深层级
-3. 目录层级不超过 3 级
-4. 只输出 JSON 数组"""
-
-        user_prompt = f"""## 项目背景
-{project_context}
-
-## 标书类型
-{bid_type}
-
-## 评分点清单
-{points_summary}
-
-## 输出格式
-请输出 JSON 数组，每项格式如下：
-[
-  {{
-    "id": "sec_1",
-    "title": "一、项目理解与需求分析",
-    "scoring_points": ["项目理解", "需求分析"],
-    "suggested_words": 1500,
-    "children": [
-      {{
-        "id": "sec_1_1",
-        "title": "（一）项目背景分析",
-        "scoring_points": ["项目理解"],
-        "suggested_words": 800
-      }}
-    ]
-  }}
-]
-
-请严格按格式输出 JSON 数组："""
+        user_prompt = get_prompt(
+            "bid_outline_user",
+            project_context=project_context,
+            bid_type=bid_type,
+            points_summary=points_summary,
+        )
 
         try:
             response = await self.selector.generate("bid_outline", system_prompt, user_prompt)

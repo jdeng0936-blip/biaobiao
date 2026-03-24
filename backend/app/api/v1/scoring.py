@@ -1,23 +1,14 @@
 """
 评分点提取与目录生成 API 路由
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from dataclasses import asdict
 
+from app.core.deps import get_tenant_id
 from app.services.scoring_extractor import ScoringExtractor
 
 router = APIRouter(prefix="/api/v1/scoring", tags=["评分点"])
-
-# 服务单例
-_extractor: ScoringExtractor | None = None
-
-
-def get_extractor() -> ScoringExtractor:
-    global _extractor
-    if _extractor is None:
-        _extractor = ScoringExtractor()
-    return _extractor
 
 
 # ============================================================
@@ -45,14 +36,17 @@ class OutlineRequest(BaseModel):
 # API 端点
 # ============================================================
 @router.post("/extract")
-async def extract_scoring_points(req: ExtractRequest):
+async def extract_scoring_points(
+    req: ExtractRequest,
+    tenant_id: str = Depends(get_tenant_id),
+):
     """
     📊 评分点提取
 
     从招标文件中提取所有评分标准和评分细则，
     输出结构化的评分点 JSON，包含分类、分值、评分要求。
     """
-    extractor = get_extractor()
+    extractor = ScoringExtractor()
     try:
         result = await extractor.extract_scoring_points(req.bid_document_text)
         return {
@@ -65,14 +59,17 @@ async def extract_scoring_points(req: ExtractRequest):
 
 
 @router.post("/outline")
-async def generate_outline(req: OutlineRequest):
+async def generate_outline(
+    req: OutlineRequest,
+    tenant_id: str = Depends(get_tenant_id),
+):
     """
     📝 评分点驱动目录生成
 
     先提取评分点，再根据评分点智能生成投标文件目录大纲，
     确保每个评分点都有对应章节覆盖。
     """
-    extractor = get_extractor()
+    extractor = ScoringExtractor()
     try:
         # Step 1: 提取评分点
         scoring = await extractor.extract_scoring_points(req.bid_document_text)

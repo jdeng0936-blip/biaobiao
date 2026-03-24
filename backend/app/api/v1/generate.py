@@ -2,35 +2,27 @@
 标书内容生成 API 路由
 RAG 检索 → Gemini 流式生成 → SSE 推送
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Optional
 
+from app.core.deps import get_tenant_id
 from app.services.knowledge_service import KnowledgeService
 from app.services.embedding_service import GeminiEmbedding
 from app.services.generate_service import BidGenerateService
 
 router = APIRouter(prefix="/api/v1/generate", tags=["内容生成"])
 
-# 临时 tenant_id（正式环境从 JWT 中提取）
-DEMO_TENANT = "demo_tenant"
-
-# 服务单例
-_generate_service: BidGenerateService | None = None
-_knowledge_service: KnowledgeService | None = None
+# Embedding 服务单例（与 tenant 无关，可全局复用）
 _embedding_service: GeminiEmbedding | None = None
 
 
-def get_services():
-    global _generate_service, _knowledge_service, _embedding_service
-    if _generate_service is None:
-        _generate_service = BidGenerateService(tenant_id=DEMO_TENANT)
-    if _knowledge_service is None:
-        _knowledge_service = KnowledgeService(tenant_id=DEMO_TENANT)
+def _get_embedding_service() -> GeminiEmbedding:
+    global _embedding_service
     if _embedding_service is None:
         _embedding_service = GeminiEmbedding()
-    return _generate_service, _knowledge_service, _embedding_service
+    return _embedding_service
 
 
 # ============================================================
@@ -52,7 +44,10 @@ class GenerateRequest(BaseModel):
 # API 端点
 # ============================================================
 @router.post("/section")
-async def generate_section(req: GenerateRequest):
+async def generate_section(
+    req: GenerateRequest,
+    tenant_id: str = Depends(get_tenant_id),
+):
     """
     📝 生成标书章节内容（SSE 流式）
 
@@ -62,7 +57,9 @@ async def generate_section(req: GenerateRequest):
     3. Gemini 流式生成标书内容
     4. SSE 逐字推送到前端
     """
-    gen_service, kb_service, emb_service = get_services()
+    gen_service = BidGenerateService(tenant_id=tenant_id)
+    kb_service = KnowledgeService(tenant_id=tenant_id)
+    emb_service = _get_embedding_service()
 
     if not gen_service.ready:
         raise HTTPException(status_code=503, detail="Gemini 生成服务未就绪")
@@ -122,7 +119,10 @@ class ChatRequest(BaseModel):
 
 
 @router.post("/chat")
-async def chat_with_ai(req: ChatRequest):
+async def chat_with_ai(
+    req: ChatRequest,
+    tenant_id: str = Depends(get_tenant_id),
+):
     """
     💬 AI 助手对话（SSE 流式）— 精准回答模块提问
 
@@ -131,7 +131,9 @@ async def chat_with_ai(req: ChatRequest):
     - 只针对用户问题回答，不复述原文
     - 回答后附带引申提问建议
     """
-    gen_service, kb_service, emb_service = get_services()
+    gen_service = BidGenerateService(tenant_id=tenant_id)
+    kb_service = KnowledgeService(tenant_id=tenant_id)
+    emb_service = _get_embedding_service()
 
     if not gen_service.ready:
         raise HTTPException(status_code=503, detail="Gemini 服务未就绪")
